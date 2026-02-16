@@ -10,14 +10,25 @@ import ExcelJS from "exceljs";
 export async function GET(req) {
   await connectToDatabase();
 
-  // Fetch all unpaid invoices (status === "unpaid" OR creditRemaining > 0)
-  const sales = await Sale.find({
+  const { searchParams } = new URL(req.url);
+  const staffId = searchParams.get("staffId");
+
+  // Build query for unpaid invoices
+  const query = {
     deletedAt: null,
     $or: [
       { status: "unpaid" },
       { creditRemaining: { $gt: 0 } }
     ]
-  })
+  };
+
+  // Filter by staff if staffId is provided
+  if (staffId) {
+    query.staffId = staffId;
+  }
+
+  // Fetch unpaid invoices
+  const sales = await Sale.find(query)
     .populate("shopId", "name")
     .populate("staffId", "name")
     .sort({ date: 1 })
@@ -63,7 +74,10 @@ export async function GET(req) {
 
   // Create workbook and worksheet
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Unpaid Invoices");
+  const worksheetName = staffId && rows.length > 0 
+    ? `Unpaid Invoices - ${rows[0].orderbookerName}`
+    : "Unpaid Invoices";
+  const worksheet = workbook.addWorksheet(worksheetName);
 
   // Set column widths
   worksheet.columns = [
@@ -157,7 +171,14 @@ export async function GET(req) {
   // Generate buffer
   const buffer = await workbook.xlsx.writeBuffer();
 
-  const filename = `unpaid-invoices-${todayStr}.xlsx`;
+  // Get staff name for filename if filtering by staff
+  let staffName = "";
+  if (staffId && rows.length > 0) {
+    staffName = rows[0].orderbookerName.replace(/[^a-zA-Z0-9]/g, "-");
+  }
+  const filename = staffId 
+    ? `unpaid-invoices-${staffName}-${todayStr}.xlsx`
+    : `unpaid-invoices-${todayStr}.xlsx`;
 
   return new NextResponse(buffer, {
     status: 200,

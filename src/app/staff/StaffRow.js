@@ -102,6 +102,11 @@ export function StaffRow({ staff, routes, updateStaff, toggleStaffActive }) {
                 View Sales
               </Button>
             </Link>
+            <a href={`/api/reports/staff/unpaid-invoices?staffId=${staff._id}`}>
+              <Button variant="outline" className="h-7 px-2 text-xs">
+                Download Report
+              </Button>
+            </a>
             <Button
               type="button"
               variant="ghost"
