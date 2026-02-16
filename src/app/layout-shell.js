@@ -18,6 +18,16 @@ export function AppShell({ children }) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [userName, setUserName] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.user?.name) setUserName(data.user.name);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Check if we're using SQLite to show Settings
@@ -72,7 +82,7 @@ export function AppShell({ children }) {
             </svg>
           </button>
           <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">
-            Expense & Sales Manager
+            {userName ?? "Expense & Sales Manager"}
           </h1>
         </div>
         <form action="/logout" method="POST" className="shrink-0">

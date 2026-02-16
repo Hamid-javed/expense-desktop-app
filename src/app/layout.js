@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "Expense & Sales Manager",
+  icons: {
+    icon: "/logo.png",
+  },
   description: "Single-tenant expense and sales management system",
 };
 

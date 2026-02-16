@@ -47,6 +47,8 @@
     "start": "next start -p 3100",
     "lint": "next lint",
     "seed": "node --env-file=.env scripts/seed.mjs",
+    "seed:clear": "node --env-file=.env scripts/seed.mjs --clear",
+    "seed:user": "node --env-file=.env scripts/seed.mjs --user-only",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3100 && electron .\"",
     "electron:start": "electron .",
     "pack": "npm run build && node scripts/copy-standalone-assets.cjs && node scripts/build-icon.cjs && npx electron-builder --win",

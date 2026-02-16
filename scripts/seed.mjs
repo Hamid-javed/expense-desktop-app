@@ -10,6 +10,9 @@ import mongoose from "mongoose";
 
 const DEFAULT_ADMIN_PASSWORD = "alrazaqtraders";
 
+const USER_ONLY = process.argv.includes("--user-only") || process.argv.includes("--only-user");
+const CLEAR_FIRST = process.argv.includes("--clear") || process.argv.includes("--delete");
+
 // Helper to get ID (handles both MongoDB _id and SQLite id)
 function getId(obj) {
   return obj._id || obj.id;
@@ -20,13 +23,9 @@ function getIdString(obj) {
   return id?.toString ? id.toString() : String(id);
 }
 
-async function main() {
+async function clearData() {
   await connectToDatabase();
-
-  const dbType = isMongoDB() ? "MongoDB" : "SQLite";
-  console.log(`Seeding ${dbType} database with demo data...`);
-
-  // Clear existing data
+  console.log("Clearing existing data...");
   await Promise.all([
     Product.deleteMany({}),
     Staff.deleteMany({}),
@@ -35,13 +34,55 @@ async function main() {
     User.deleteMany({}),
     InvoiceCounter.deleteMany({}),
   ]);
+  console.log("Data cleared.");
+}
+
+async function seedUserOnly() {
+  await connectToDatabase();
+
+  const dbType = isMongoDB() ? "MongoDB" : "SQLite";
+  console.log(`Creating admin user in ${dbType}...`);
 
   const passwordHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
-  const admin = await User.create({
-    email: "admin@alrazaqtraders.com",
-    name: "Al-Razaq Traders",
-    passwordHash,
-  });
+  const admin = await User.findOneAndUpdate(
+    { email: "admin@alrazaqtraders.com" },
+    { email: "admin@alrazaqtraders.com", name: "Al Razaq Traders", passwordHash },
+    { upsert: true, new: true }
+  );
+
+  console.log("User created/updated.");
+  console.log({ admin: { email: admin.email, password: DEFAULT_ADMIN_PASSWORD } });
+
+  if (isMongoDB()) {
+    await mongoose.disconnect();
+  }
+}
+
+async function main() {
+  if (USER_ONLY) {
+    if (CLEAR_FIRST) {
+      await connectToDatabase();
+      await User.deleteMany({});
+      console.log("Users cleared.");
+    }
+    return seedUserOnly();
+  }
+
+  if (CLEAR_FIRST) {
+    await clearData();
+  }
+
+  await connectToDatabase();
+
+  const dbType = isMongoDB() ? "MongoDB" : "SQLite";
+  console.log(`Seeding ${dbType} database with demo data...`);
+
+  const passwordHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
+  const admin = await User.findOneAndUpdate(
+    { email: "hamid@gmail.com" },
+    { email: "hamid@gmail.com", name: "Hamid Traders", passwordHash },
+    { upsert: true, new: true }
+  );
 
   const routes = await RouteModel.insertMany([
     { name: "Route A" },
@@ -84,7 +125,11 @@ async function main() {
     { name: "Product C", sku: "PC-001", unit: "kg", price: 5 },
   ]);
 
-  await InvoiceCounter.create({ key: "invoice", lastNumber: 0 });
+  await InvoiceCounter.findOneAndUpdate(
+    { key: "invoice" },
+    { $setOnInsert: { key: "invoice", lastNumber: 0 } },
+    { upsert: true }
+  );
 
   console.log("Seed complete.");
   console.log({
