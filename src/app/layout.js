@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+
 export const metadata = {
   title: "Expense & Sales Manager",
   icons: {
