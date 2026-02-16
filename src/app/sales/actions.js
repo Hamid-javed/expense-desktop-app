@@ -97,7 +97,7 @@ export async function createSale(formData) {
       staffId: data.staffId,
       date: { $gte: startOfDay, $lte: endOfDay },
       deletedAt: null,
-    });
+    }).lean();
 
     const itemsWithTotals = data.items.map((it) => ({
       productId: it.productId,
@@ -185,12 +185,20 @@ export async function createSale(formData) {
       // Update existing sale: set cash/credit for merged total from new payment
       const newCash = data.paymentType === "cash" ? newTotalAmount : 0;
       const newCredit = data.paymentType === "credit" ? newTotalAmount : 0;
-      existingSale.items = mergedItems;
-      existingSale.totalAmount = mergedTotalAmount;
-      existingSale.cashCollected = (existingSale.cashCollected ?? 0) + newCash;
-      existingSale.creditRemaining = (existingSale.creditRemaining ?? 0) + newCredit;
-      await existingSale.save();
-      sale = existingSale;
+      
+      // Get the sale ID (handle both MongoDB _id and SQLite id)
+      const saleId = existingSale._id || existingSale.id;
+      
+      // Update the sale using SQLite-compatible method
+      sale = await Sale.findByIdAndUpdate(
+        saleId,
+        {
+          items: mergedItems,
+          totalAmount: mergedTotalAmount,
+          cashCollected: (existingSale.cashCollected ?? 0) + newCash,
+          creditRemaining: (existingSale.creditRemaining ?? 0) + newCredit,
+        }
+      );
     } else {
       // Create new sale
       invoiceId = await getNextInvoiceNumber();
@@ -243,7 +251,7 @@ export async function createSale(formData) {
     revalidatePath("/sales");
     revalidatePath("/");
     revalidatePath("/products");
-    revalidatePath("/reports");
+    revalidatePath("/");
     revalidatePath(`/staff/${data.staffId}/sales`);
     revalidatePath(`/shops/${data.shopId}`);
 
@@ -272,7 +280,7 @@ export async function updateSaleCashCredit(formData) {
       return { error: "Credit remaining must be a non-negative number." };
     }
 
-    const sale = await Sale.findById(saleId);
+    const sale = await Sale.findById(saleId).lean();
     if (!sale || sale.deletedAt) {
       return { error: "Sale not found" };
     }
@@ -284,14 +292,16 @@ export async function updateSaleCashCredit(formData) {
       };
     }
 
-    sale.cashCollected = cashCollected;
-    sale.creditRemaining = creditRemaining;
-    await sale.save();
+    const saleIdValue = sale._id || sale.id;
+    await Sale.findByIdAndUpdate(saleIdValue, {
+      cashCollected,
+      creditRemaining,
+    });
 
     if (shopId) {
       revalidatePath(`/shops/${shopId}`);
     }
-    revalidatePath("/reports");
+    revalidatePath("/");
     return { success: true };
   } catch (error) {
     console.error("Error updating sale cash/credit:", error);
@@ -308,20 +318,40 @@ export async function toggleSaleStatus(formData) {
       return { error: "Missing sale id" };
     }
 
-    const sale = await Sale.findById(saleId);
+    const sale = await Sale.findById(saleId).lean();
     if (!sale || sale.deletedAt) {
       return { error: "Sale not found" };
     }
 
-    sale.status = sale.status === "paid" ? "unpaid" : "paid";
-    await sale.save();
+    const saleIdValue = sale._id || sale.id;
+    const isCurrentlyPaid = sale.status === "paid";
+    const newStatus = isCurrentlyPaid ? "unpaid" : "paid";
+    const totalAmount = sale.totalAmount ?? 0;
+    
+    // When marking as paid, set cashCollected to totalAmount and creditRemaining to 0
+    // When marking as unpaid, set both cashCollected and creditRemaining to 0
+    const updateData = {
+      status: newStatus,
+    };
+    
+    if (newStatus === "paid") {
+      // Paid means all amount is given in cash
+      updateData.cashCollected = totalAmount;
+      updateData.creditRemaining = 0;
+    } else {
+      // Unpaid means reset both to 0
+      updateData.cashCollected = 0;
+      updateData.creditRemaining = 0;
+    }
+    
+    await Sale.findByIdAndUpdate(saleIdValue, updateData);
 
     if (shopId) {
       revalidatePath(`/shops/${shopId}`);
     } else {
       revalidatePath("/shops");
     }
-    revalidatePath("/reports");
+    revalidatePath("/");
     return { success: true };
   } catch (error) {
     console.error("Error toggling sale status:", error);

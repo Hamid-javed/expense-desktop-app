@@ -12,7 +12,6 @@ const baseNavItems = [
   { href: "/shops", label: "Shops" },
   { href: "/routes", label: "Routes" },
   { href: "/sales", label: "Sales" },
-  { href: "/reports", label: "Reports" },
 ];
 
 export function AppShell({ children }) {

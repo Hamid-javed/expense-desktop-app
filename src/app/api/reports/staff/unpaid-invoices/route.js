@@ -13,13 +13,11 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const staffId = searchParams.get("staffId");
 
-  // Build query for unpaid invoices
+  // Build query for unpaid invoices (check both status and creditRemaining)
   const query = {
     deletedAt: null,
-    $or: [
-      { status: "unpaid" },
-      { creditRemaining: { $gt: 0 } }
-    ]
+    status: "unpaid",
+    creditRemaining: { $gt: 0 }
   };
 
   // Filter by staff if staffId is provided
@@ -34,8 +32,10 @@ export async function GET(req) {
     .sort({ date: 1 })
     .lean();
 
-  // Filter to only include sales with credit remaining > 0
-  const unpaidSales = sales.filter(sale => (sale.creditRemaining ?? 0) > 0);
+  // Filter to only include unpaid sales with credit remaining > 0
+  const unpaidSales = sales.filter(sale => 
+    sale.status === "unpaid" && (sale.creditRemaining ?? 0) > 0
+  );
 
   if (unpaidSales.length === 0) {
     return NextResponse.json(
@@ -54,12 +54,18 @@ export async function GET(req) {
     const deliveryDate = `${month}/${day}/${year}`;
     const aging = getDaysExceeded(sale.date, todayStr);
     
+    // Calculate amount remaining: totalAmount - cashCollected
+    // For unpaid invoices, this is the amount that still needs to be paid
+    const totalAmount = sale.totalAmount ?? 0;
+    const cashCollected = sale.cashCollected ?? 0;
+    const amountRemaining = totalAmount - cashCollected;
+    
     return {
       storeName: sale.shopId?.name || "-",
       orderbookerName: sale.staffId?.name || "-",
       invoiceNumber: `${INVOICE_PREFIX}${sale.invoiceId}`,
       deliveryDate: deliveryDate,
-      amountRemaining: sale.creditRemaining ?? 0,
+      amountRemaining: amountRemaining,
       aging: aging,
     };
   });

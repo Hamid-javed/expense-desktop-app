@@ -154,8 +154,71 @@ export class SQLiteModel {
     const id = query._id || query.id;
     if (!id) throw new Error("Update query must include _id or id");
 
-    const row = this.objectToRow(update);
+    // Handle MongoDB-style operators
+    let finalUpdate = { ...update };
+    
+    // Handle $unset operator (set fields to null)
+    if (update.$unset) {
+      finalUpdate = {};
+      // Copy existing values (excluding id and _id)
+      const existing = await this.findById(id).execute();
+      if (existing) {
+        for (const [key, value] of Object.entries(existing)) {
+          if (key !== '_id' && key !== 'id') {
+            finalUpdate[key] = value;
+          }
+        }
+      }
+      // Set $unset fields to null
+      for (const field of Object.keys(update.$unset)) {
+        finalUpdate[field] = null;
+      }
+      // Merge any other non-operator fields
+      for (const [key, value] of Object.entries(update)) {
+        if (key !== '$unset' && key !== '$inc' && !key.startsWith('$') && key !== '_id' && key !== 'id') {
+          finalUpdate[key] = value;
+        }
+      }
+    } else if (update.$inc) {
+      // Get current record to read existing values
+      const existing = await this.findById(id).execute();
+      if (!existing) {
+        throw new Error(`Record with id ${id} not found`);
+      }
+      
+      finalUpdate = {};
+      // Copy existing values (excluding id and _id)
+      for (const [key, value] of Object.entries(existing)) {
+        if (key !== '_id' && key !== 'id') {
+          finalUpdate[key] = value;
+        }
+      }
+      
+      // Apply increments
+      for (const [field, increment] of Object.entries(update.$inc)) {
+        const currentValue = finalUpdate[field] || 0;
+        finalUpdate[field] = currentValue + increment;
+      }
+      
+      // Merge any other non-operator fields
+      for (const [key, value] of Object.entries(update)) {
+        if (key !== '$inc' && !key.startsWith('$') && key !== '_id' && key !== 'id') {
+          finalUpdate[key] = value;
+        }
+      }
+    } else {
+      // For non-$inc updates, filter out MongoDB-specific fields
+      finalUpdate = {};
+      for (const [key, value] of Object.entries(update)) {
+        if (key !== '_id' && key !== 'id' && !key.startsWith('$')) {
+          finalUpdate[key] = value;
+        }
+      }
+    }
+
+    const row = this.objectToRow(finalUpdate);
     delete row.id; // Don't update ID
+    delete row._id; // Remove _id if present
     const columns = Object.keys(row);
     const setClause = columns.map((col) => `${col} = ?`).join(", ");
     const values = columns.map((col) => row[col]);
@@ -172,6 +235,33 @@ export class SQLiteModel {
    */
   async findByIdAndUpdate(id, update, options = {}) {
     return await this.updateOne({ _id: id }, update);
+  }
+
+  /**
+   * Update many records matching query
+   */
+  async updateMany(query, update) {
+    const db = this.getDB();
+    
+    // Find all matching records
+    const queryWrapper = this.find(query);
+    const records = await queryWrapper.execute();
+    
+    if (!Array.isArray(records) || records.length === 0) {
+      return { modifiedCount: 0 };
+    }
+    
+    // Update each record
+    let modifiedCount = 0;
+    for (const record of records) {
+      const id = record._id || record.id;
+      if (id) {
+        await this.updateOne({ _id: id }, update);
+        modifiedCount++;
+      }
+    }
+    
+    return { modifiedCount };
   }
 
   /**
@@ -202,20 +292,33 @@ export class SQLiteModel {
   }
 
   /**
-   * Delete many (soft delete)
+   * Delete many (soft delete, or hard delete if query is empty for seeding)
    */
-  deleteMany(query) {
+  deleteMany(query = {}) {
     const db = this.getDB();
-    let sql = `UPDATE ${this.tableName} SET deletedAt = ? WHERE deletedAt IS NULL`;
-    const params = [Date.now()];
+    
+    // If query is empty (clearing all), do hard delete for seeding purposes
+    // Otherwise do soft delete
+    const isEmptyQuery = Object.keys(query).length === 0;
+    
+    if (isEmptyQuery) {
+      // Hard delete for clearing all data (used in seeding)
+      let sql = `DELETE FROM ${this.tableName}`;
+      const result = db.prepare(sql).run();
+      return { deletedCount: result.changes };
+    } else {
+      // Soft delete for specific queries
+      let sql = `UPDATE ${this.tableName} SET deletedAt = ? WHERE deletedAt IS NULL`;
+      const params = [Date.now()];
 
-    if (query._id) {
-      sql += ` AND id = ?`;
-      params.push(query._id);
+      if (query._id) {
+        sql += ` AND id = ?`;
+        params.push(query._id);
+      }
+
+      const result = db.prepare(sql).run(...params);
+      return { deletedCount: result.changes };
     }
-
-    const result = db.prepare(sql).run(...params);
-    return { deletedCount: result.changes };
   }
 
   /**

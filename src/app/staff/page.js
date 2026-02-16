@@ -9,6 +9,7 @@ import { Button } from "../../components/ui/Button";
 import Link from "next/link";
 import { createStaff, updateStaff, toggleStaffActive } from "./actions";
 import { StaffRow } from "./StaffRow";
+import { DownloadUnpaidInvoicesButton } from "./DownloadUnpaidInvoicesButton";
 
 export const dynamic = "force-dynamic";
 
@@ -37,11 +38,7 @@ export default async function StaffPage() {
         title="Staff"
         description="Manage sales staff, routes, and their status."
         actions={
-          <a href="/api/reports/staff/unpaid-invoices">
-            <Button variant="outline" className="h-8 px-3 text-xs">
-              Download combined Report
-            </Button>
-          </a>
+          <DownloadUnpaidInvoicesButton />
         }
       />
       <Card>

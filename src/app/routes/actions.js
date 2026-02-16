@@ -36,13 +36,13 @@ export async function updateRoute(formData) {
       return { error: "Name is required" };
     }
 
-    const route = await RouteModel.findById(routeId);
+    const route = await RouteModel.findById(routeId).lean();
     if (!route) {
       return { error: "Route not found" };
     }
 
-    route.name = name;
-    await route.save();
+    const routeIdValue = route._id || route.id;
+    await RouteModel.findByIdAndUpdate(routeIdValue, { name });
 
     revalidatePath("/routes");
     revalidatePath("/staff");
@@ -62,22 +62,24 @@ export async function deleteRoute(formData) {
       return { error: "Missing route id" };
     }
 
-    const route = await RouteModel.findById(routeId);
+    const route = await RouteModel.findById(routeId).lean();
     if (!route) {
       return { error: "Route not found" };
     }
 
+    const routeIdValue = route._id || route.id;
+    const previousStaffId = route.assignedStaff?.toString();
+    
     // Soft delete: set deletedAt and isActive
-    route.deletedAt = new Date();
-    route.isActive = false;
-    await route.save();
+    await RouteModel.findByIdAndUpdate(routeIdValue, {
+      deletedAt: Date.now(),
+      isActive: false,
+      assignedStaff: null,
+    });
 
     // Unassign staff from this route
-    const previousStaffId = route.assignedStaff?.toString();
     if (previousStaffId) {
       await Staff.findByIdAndUpdate(previousStaffId, { $unset: { routeId: "" } });
-      route.assignedStaff = null;
-      await route.save();
     }
 
     revalidatePath("/routes");
@@ -99,17 +101,20 @@ export async function assignStaffToRoute(formData) {
       return { error: "Missing routeId" };
     }
 
-    const route = await RouteModel.findById(routeId);
+    const route = await RouteModel.findById(routeId).lean();
     if (!route) {
       return { error: "Route not found" };
     }
+
+    const routeIdValue = route._id || route.id;
 
     // Handle unassignment (empty staffId)
     if (!staffId) {
       // Unassign: clear the route's assignedStaff and remove routeId from the previously assigned staff
       const previousStaffId = route.assignedStaff?.toString();
-      route.assignedStaff = null;
-      await route.save();
+      await RouteModel.findByIdAndUpdate(routeIdValue, {
+        assignedStaff: null,
+      });
 
       if (previousStaffId) {
         await Staff.findByIdAndUpdate(previousStaffId, { $unset: { routeId: "" } });
@@ -145,8 +150,9 @@ export async function assignStaffToRoute(formData) {
       await Staff.findByIdAndUpdate(previousStaffId, { $unset: { routeId: "" } });
     }
 
-    route.assignedStaff = staffId;
-    await route.save();
+    await RouteModel.findByIdAndUpdate(routeIdValue, {
+      assignedStaff: staffId,
+    });
 
     await Staff.findByIdAndUpdate(staffId, { routeId });
 

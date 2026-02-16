@@ -134,13 +134,15 @@ export async function toggleProductActive(formData) {
       return { error: "Missing product id" };
     }
 
-    const product = await Product.findById(id);
+    const product = await Product.findById(id).lean();
     if (!product) {
       return { error: "Product not found" };
     }
 
-    product.isActive = !product.isActive;
-    await product.save();
+    const productIdValue = product._id || product.id;
+    await Product.findByIdAndUpdate(productIdValue, {
+      isActive: !product.isActive,
+    });
 
     revalidatePath("/products");
     return { success: true };

@@ -56,11 +56,13 @@ export async function createStaff(formData) {
         { $unset: { assignedStaff: "" } }
       );
 
-      const route = await RouteModel.findById(routeId);
-      if (route) {
-        const previousStaffId = route.assignedStaff?.toString();
-        route.assignedStaff = staff._id;
-        await route.save();
+        const route = await RouteModel.findById(routeId).lean();
+        if (route) {
+          const previousStaffId = route.assignedStaff?.toString();
+          const routeIdValue = route._id || route.id;
+          await RouteModel.findByIdAndUpdate(routeIdValue, {
+            assignedStaff: staff._id,
+          });
 
         // If some other staff previously owned this route, clear their routeId
         if (previousStaffId && previousStaffId !== staff._id.toString()) {
@@ -122,11 +124,13 @@ export async function updateStaff(formData) {
           { assignedStaff: staff._id, _id: { $ne: newRouteId } },
           { $unset: { assignedStaff: "" } }
         );
-        const route = await RouteModel.findById(newRouteId);
+        const route = await RouteModel.findById(newRouteId).lean();
         if (route) {
           const previousStaffId = route.assignedStaff?.toString();
-          route.assignedStaff = staff._id;
-          await route.save();
+          const routeIdValue = route._id || route.id;
+          await RouteModel.findByIdAndUpdate(routeIdValue, {
+            assignedStaff: staff._id,
+          });
           if (previousStaffId && previousStaffId !== staff._id.toString()) {
             await Staff.findByIdAndUpdate(previousStaffId, { $unset: { routeId: "" } });
           }
@@ -155,13 +159,15 @@ export async function toggleStaffActive(formData) {
       return { error: "Missing id" };
     }
 
-    const staff = await Staff.findById(id);
+    const staff = await Staff.findById(id).lean();
     if (!staff) {
       return { error: "Staff not found" };
     }
 
-    staff.isActive = !staff.isActive;
-    await staff.save();
+    const staffIdValue = staff._id || staff.id;
+    await Staff.findByIdAndUpdate(staffIdValue, {
+      isActive: !staff.isActive,
+    });
 
     revalidatePath("/staff");
     return { success: true };

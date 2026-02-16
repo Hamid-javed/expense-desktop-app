@@ -119,13 +119,15 @@ export async function toggleShopActive(formData) {
       return { error: "Missing id" };
     }
 
-    const shop = await Shop.findById(id);
+    const shop = await Shop.findById(id).lean();
     if (!shop) {
       return { error: "Shop not found" };
     }
 
-    shop.isActive = !shop.isActive;
-    await shop.save();
+    const shopId = shop._id || shop.id;
+    await Shop.findByIdAndUpdate(shopId, {
+      isActive: !shop.isActive,
+    });
 
     revalidatePath("/shops");
     return { success: true };

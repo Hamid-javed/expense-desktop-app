@@ -120,7 +120,7 @@ export async function updateSaleItemQuantity(formData) {
     const validated = updateSaleItemSchema.parse(rawData);
 
     // Fetch the sale
-    const sale = await Sale.findById(validated.saleId);
+    const sale = await Sale.findById(validated.saleId).lean();
     if (!sale || sale.deletedAt) {
       return { success: false, error: "Sale not found" };
     }
@@ -169,8 +169,12 @@ export async function updateSaleItemQuantity(formData) {
     // Note: currentCredit is now managed manually from the shop page only
     // Removed automatic currentCredit updates
 
-    // Save the updated sale
-    await sale.save();
+    // Update the sale
+    const saleIdValue = sale._id || sale.id;
+    await Sale.findByIdAndUpdate(saleIdValue, {
+      items: sale.items,
+      totalAmount: sale.totalAmount,
+    });
 
     // Revalidate paths
     revalidatePath(`/staff/${sale.staffId}/sales`);

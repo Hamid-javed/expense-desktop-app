@@ -55,16 +55,46 @@ class SaleModel extends SQLiteModel {
       params.push(query.staffId);
     }
     if (query.date) {
-      if (query.date.$gte && query.date.$lte) {
-        const start = query.date.$gte instanceof Date ? query.date.$gte.getTime() : query.date.$gte;
-        const end = query.date.$lte instanceof Date ? query.date.$lte.getTime() : query.date.$lte;
-        sql += ` AND date >= ? AND date <= ?`;
-        params.push(start, end);
+      if (typeof query.date === 'object') {
+        if (query.date.$gte !== undefined) {
+          const start = query.date.$gte instanceof Date ? query.date.$gte.getTime() : query.date.$gte;
+          sql += ` AND date >= ?`;
+          params.push(start);
+        }
+        if (query.date.$lte !== undefined) {
+          const end = query.date.$lte instanceof Date ? query.date.$lte.getTime() : query.date.$lte;
+          sql += ` AND date <= ?`;
+          params.push(end);
+        }
+        if (query.date.$gt !== undefined) {
+          const start = query.date.$gt instanceof Date ? query.date.$gt.getTime() : query.date.$gt;
+          sql += ` AND date > ?`;
+          params.push(start);
+        }
+        if (query.date.$lt !== undefined) {
+          const end = query.date.$lt instanceof Date ? query.date.$lt.getTime() : query.date.$lt;
+          sql += ` AND date < ?`;
+          params.push(end);
+        }
+      } else {
+        // Direct date value
+        const dateValue = query.date instanceof Date ? query.date.getTime() : query.date;
+        sql += ` AND date = ?`;
+        params.push(dateValue);
       }
     }
     if (query.status) {
       sql += ` AND status = ?`;
       params.push(query.status);
+    }
+    if (query.creditRemaining) {
+      if (typeof query.creditRemaining === 'object' && query.creditRemaining.$gt !== undefined) {
+        sql += ` AND creditRemaining > ?`;
+        params.push(query.creditRemaining.$gt);
+      } else {
+        sql += ` AND creditRemaining = ?`;
+        params.push(query.creditRemaining);
+      }
     }
     if (query.isActive !== undefined) {
       sql += ` AND isActive = ?`;
@@ -76,10 +106,12 @@ class SaleModel extends SQLiteModel {
       const orConditions = [];
       query.$or.forEach((condition) => {
         if (condition.status) {
-          orConditions.push(`status = '${condition.status}'`);
+          orConditions.push(`status = ?`);
+          params.push(condition.status);
         }
         if (condition.creditRemaining && condition.creditRemaining.$gt !== undefined) {
-          orConditions.push(`creditRemaining > ${condition.creditRemaining.$gt}`);
+          orConditions.push(`creditRemaining > ?`);
+          params.push(condition.creditRemaining.$gt);
         }
       });
       if (orConditions.length > 0) {
@@ -116,6 +148,35 @@ class SaleModel extends SQLiteModel {
     if (query.staffId) {
       sql += ` AND staffId = ?`;
       params.push(query.staffId);
+    }
+    if (query.date) {
+      if (typeof query.date === 'object') {
+        if (query.date.$gte !== undefined) {
+          const start = query.date.$gte instanceof Date ? query.date.$gte.getTime() : query.date.$gte;
+          sql += ` AND date >= ?`;
+          params.push(start);
+        }
+        if (query.date.$lte !== undefined) {
+          const end = query.date.$lte instanceof Date ? query.date.$lte.getTime() : query.date.$lte;
+          sql += ` AND date <= ?`;
+          params.push(end);
+        }
+        if (query.date.$gt !== undefined) {
+          const start = query.date.$gt instanceof Date ? query.date.$gt.getTime() : query.date.$gt;
+          sql += ` AND date > ?`;
+          params.push(start);
+        }
+        if (query.date.$lt !== undefined) {
+          const end = query.date.$lt instanceof Date ? query.date.$lt.getTime() : query.date.$lt;
+          sql += ` AND date < ?`;
+          params.push(end);
+        }
+      } else {
+        // Direct date value
+        const dateValue = query.date instanceof Date ? query.date.getTime() : query.date;
+        sql += ` AND date = ?`;
+        params.push(dateValue);
+      }
     }
 
     sql += ` LIMIT 1`;
