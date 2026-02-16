@@ -22,6 +22,10 @@
       {
         "from": "public/logo.png",
         "to": "logo.png"
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
       }
     ],
     "win": {

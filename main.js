@@ -69,9 +69,19 @@ function createWindow() {
   dbg('H4', 'createWindow called');
   // #endregion
   const preloadPath = path.join(__dirname, 'preload.js');
-  const iconPath = isDev
-    ? path.join(__dirname, 'public', 'logo.png')
-    : path.join(process.resourcesPath, 'logo.png');
+  // Try icon.ico first, fallback to logo.png if not found
+  let iconPath;
+  if (isDev) {
+    iconPath = path.join(__dirname, 'build', 'icon.ico');
+    if (!fs.existsSync(iconPath)) {
+      iconPath = path.join(__dirname, 'public', 'logo.png');
+    }
+  } else {
+    iconPath = path.join(process.resourcesPath, 'icon.ico');
+    if (!fs.existsSync(iconPath)) {
+      iconPath = path.join(process.resourcesPath, 'logo.png');
+    }
+  }
   const icon = fs.existsSync(iconPath) ? iconPath : undefined;
   mainWindow = new BrowserWindow({
     width: 1200,
