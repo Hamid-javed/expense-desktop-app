@@ -1,6 +1,6 @@
-"use server";
-
 import mongoose from "mongoose";
+import { isMongoDB } from "../lib/db/index.js";
+import { Shop as SQLiteShop } from "./sqlite/Shop.js";
 
 const ShopSchemaDef = new mongoose.Schema(
   {
@@ -16,6 +16,8 @@ const ShopSchemaDef = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Shop =
+const MongooseShop =
   mongoose.models.Shop || mongoose.model("Shop", ShopSchemaDef);
+
+export const Shop = isMongoDB() ? MongooseShop : SQLiteShop;
 

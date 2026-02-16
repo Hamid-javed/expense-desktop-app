@@ -1,6 +1,6 @@
-"use server";
-
 import mongoose from "mongoose";
+import { isMongoDB } from "../lib/db/index.js";
+import { Staff as SQLiteStaff } from "./sqlite/Staff.js";
 
 const StaffSchemaDef = new mongoose.Schema(
   {
@@ -15,6 +15,8 @@ const StaffSchemaDef = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Staff =
+const MongooseStaff =
   mongoose.models.Staff || mongoose.model("Staff", StaffSchemaDef);
+
+export const Staff = isMongoDB() ? MongooseStaff : SQLiteStaff;
 

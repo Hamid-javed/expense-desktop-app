@@ -1,7 +1,7 @@
-"use server";
-
 import mongoose from "mongoose";
 import { UNITS } from "../lib/config.js";
+import { isMongoDB } from "../lib/db/index.js";
+import { Product as SQLiteProduct } from "./sqlite/Product.js";
 
 const ProductSchema = new mongoose.Schema(
   {
@@ -21,6 +21,9 @@ const ProductSchema = new mongoose.Schema(
   }
 );
 
-export const Product =
+const MongooseProduct =
   mongoose.models.Product || mongoose.model("Product", ProductSchema);
+
+// Export the appropriate model based on database type
+export const Product = isMongoDB() ? MongooseProduct : SQLiteProduct;
 

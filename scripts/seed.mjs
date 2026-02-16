@@ -1,20 +1,32 @@
-import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { connectToDatabase } from "../src/lib/db.js";
+import { connectToDatabase, isMongoDB } from "../src/lib/db/index.js";
 import { Product } from "../src/models/Product.js";
 import { Staff } from "../src/models/Staff.js";
 import { Shop } from "../src/models/Shop.js";
 import { RouteModel } from "../src/models/Route.js";
 import { User } from "../src/models/User.js";
 import { InvoiceCounter } from "../src/models/InvoiceCounter.js";
+import mongoose from "mongoose";
 
 const DEFAULT_ADMIN_PASSWORD = "alrazaqtraders";
+
+// Helper to get ID (handles both MongoDB _id and SQLite id)
+function getId(obj) {
+  return obj._id || obj.id;
+}
+
+function getIdString(obj) {
+  const id = getId(obj);
+  return id?.toString ? id.toString() : String(id);
+}
 
 async function main() {
   await connectToDatabase();
 
-  console.log("Seeding database with demo data...");
+  const dbType = isMongoDB() ? "MongoDB" : "SQLite";
+  console.log(`Seeding ${dbType} database with demo data...`);
 
+  // Clear existing data
   await Promise.all([
     Product.deleteMany({}),
     Staff.deleteMany({}),
@@ -40,13 +52,13 @@ async function main() {
     {
       name: "John Doe",
       phone: "111-111-1111",
-      routeId: routes[0]._id,
+      routeId: getId(routes[0]),
       staffId: "100001",
     },
     {
       name: "Jane Smith",
       phone: "222-222-2222",
-      routeId: routes[1]._id,
+      routeId: getId(routes[1]),
       staffId: "100002",
     },
   ]);
@@ -56,13 +68,13 @@ async function main() {
       name: "Alpha Store",
       phone: "555-0001",
       currentCredit: 0,
-      routeId: routes[0]._id,
+      routeId: getId(routes[0]),
     },
     {
       name: "Beta Market",
       phone: "555-0002",
       currentCredit: 0,
-      routeId: routes[1]._id,
+      routeId: getId(routes[1]),
     },
   ]);
 
@@ -77,13 +89,16 @@ async function main() {
   console.log("Seed complete.");
   console.log({
     admin: { email: admin.email, password: DEFAULT_ADMIN_PASSWORD },
-    routes: routes.map((r) => ({ id: r._id.toString(), name: r.name })),
-    staff: staff.map((s) => ({ id: s._id.toString(), name: s.name })),
-    shops: shops.map((s) => ({ id: s._id.toString(), name: s.name })),
-    products: products.map((p) => ({ id: p._id.toString(), name: p.name })),
+    routes: routes.map((r) => ({ id: getIdString(r), name: r.name })),
+    staff: staff.map((s) => ({ id: getIdString(s), name: s.name })),
+    shops: shops.map((s) => ({ id: getIdString(s), name: s.name })),
+    products: products.map((p) => ({ id: getIdString(p), name: p.name })),
   });
 
-  await mongoose.disconnect();
+  // Disconnect MongoDB if used
+  if (isMongoDB()) {
+    await mongoose.disconnect();
+  }
 }
 
 main().catch((err) => {

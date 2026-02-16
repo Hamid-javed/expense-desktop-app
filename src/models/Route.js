@@ -1,6 +1,6 @@
-"use server";
-
 import mongoose from "mongoose";
+import { isMongoDB } from "../lib/db/index.js";
+import { RouteModel as SQLiteRouteModel } from "./sqlite/Route.js";
 
 const RouteSchemaDef = new mongoose.Schema(
   {
@@ -14,6 +14,8 @@ const RouteSchemaDef = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const RouteModel =
+const MongooseRouteModel =
   mongoose.models.Route || mongoose.model("Route", RouteSchemaDef);
+
+export const RouteModel = isMongoDB() ? MongooseRouteModel : SQLiteRouteModel;
 

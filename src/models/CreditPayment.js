@@ -1,6 +1,6 @@
-"use server";
-
 import mongoose from "mongoose";
+import { isMongoDB } from "../lib/db/index.js";
+import { CreditPayment as SQLiteCreditPayment } from "./sqlite/CreditPayment.js";
 
 const CreditPaymentSchemaDef = new mongoose.Schema(
   {
@@ -14,7 +14,9 @@ const CreditPaymentSchemaDef = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const CreditPayment =
+const MongooseCreditPayment =
   mongoose.models.CreditPayment ||
   mongoose.model("CreditPayment", CreditPaymentSchemaDef);
+
+export const CreditPayment = isMongoDB() ? MongooseCreditPayment : SQLiteCreditPayment;
 

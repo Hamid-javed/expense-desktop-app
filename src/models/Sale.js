@@ -1,7 +1,7 @@
-"use server";
-
 import mongoose from "mongoose";
 import { PAYMENT_TYPES } from "../lib/config.js";
+import { isMongoDB } from "../lib/db/index.js";
+import { Sale as SQLiteSale } from "./sqlite/Sale.js";
 
 const SaleItemSchema = new mongoose.Schema(
   {
@@ -35,6 +35,8 @@ const SaleSchemaDef = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Sale =
+const MongooseSale =
   mongoose.models.Sale || mongoose.model("Sale", SaleSchemaDef);
+
+export const Sale = isMongoDB() ? MongooseSale : SQLiteSale;
 

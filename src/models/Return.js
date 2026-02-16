@@ -1,6 +1,6 @@
-"use server";
-
 import mongoose from "mongoose";
+import { isMongoDB } from "../lib/db/index.js";
+import { ReturnModel as SQLiteReturnModel } from "./sqlite/Return.js";
 
 const ReturnSchemaDef = new mongoose.Schema(
   {
@@ -18,6 +18,8 @@ const ReturnSchemaDef = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const ReturnModel =
+const MongooseReturnModel =
   mongoose.models.Return || mongoose.model("Return", ReturnSchemaDef);
+
+export const ReturnModel = isMongoDB() ? MongooseReturnModel : SQLiteReturnModel;
 

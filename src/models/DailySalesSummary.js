@@ -1,6 +1,6 @@
-"use server";
-
 import mongoose from "mongoose";
+import { isMongoDB } from "../lib/db/index.js";
+import { DailySalesSummary as SQLiteDailySalesSummary } from "./sqlite/DailySalesSummary.js";
 
 const DailySalesSummarySchemaDef = new mongoose.Schema(
   {
@@ -36,6 +36,8 @@ const DailySalesSummarySchemaDef = new mongoose.Schema(
 // Compound index to ensure one summary per staff per date
 DailySalesSummarySchemaDef.index({ staffId: 1, date: 1 }, { unique: true });
 
-export const DailySalesSummary =
+const MongooseDailySalesSummary =
   mongoose.models.DailySalesSummary ||
   mongoose.model("DailySalesSummary", DailySalesSummarySchemaDef);
+
+export const DailySalesSummary = isMongoDB() ? MongooseDailySalesSummary : SQLiteDailySalesSummary;

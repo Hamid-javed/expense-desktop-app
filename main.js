@@ -140,6 +140,7 @@ function startNextServerPackaged() {
       PORT: String(PORT),
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
+      ELECTRON_USER_DATA: app.getPath('userData'),
     },
     stdio: 'inherit',
   });

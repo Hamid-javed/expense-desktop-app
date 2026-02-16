@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 
-const navItems = [
+const baseNavItems = [
   { href: "/", label: "Dashboard" },
   { href: "/products", label: "Products" },
   { href: "/staff", label: "Staff" },
@@ -18,6 +18,24 @@ const navItems = [
 export function AppShell({ children }) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    // Check if we're using SQLite to show Settings
+    fetch("/api/settings/db-info")
+      .then((res) => res.json())
+      .then((data) => {
+        setShowSettings(data.isSQLite === true);
+      })
+      .catch(() => {
+        // If API fails, hide settings
+        setShowSettings(false);
+      });
+  }, []);
+
+  const navItems = showSettings
+    ? [...baseNavItems, { href: "/settings", label: "Settings" }]
+    : baseNavItems;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">

@@ -1,7 +1,7 @@
-"use server";
-
 import mongoose from "mongoose";
 import { ROLES } from "../lib/config.js";
+import { isMongoDB } from "../lib/db/index.js";
+import { User as SQLiteUser } from "./sqlite/User.js";
 
 const UserSchemaDef = new mongoose.Schema(
   {
@@ -19,6 +19,8 @@ const UserSchemaDef = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const User =
+const MongooseUser =
   mongoose.models.User || mongoose.model("User", UserSchemaDef);
+
+export const User = isMongoDB() ? MongooseUser : SQLiteUser;
 
