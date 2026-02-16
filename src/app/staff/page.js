@@ -36,6 +36,13 @@ export default async function StaffPage() {
       <PageHeader
         title="Staff"
         description="Manage sales staff, routes, and their status."
+        actions={
+          <a href="/api/reports/staff/unpaid-invoices">
+            <Button variant="outline" className="h-8 px-3 text-xs">
+              Download Unpaid Invoices Report
+            </Button>
+          </a>
+        }
       />
       <Card>
         <CardBody>
