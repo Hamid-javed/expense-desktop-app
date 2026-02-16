@@ -195,8 +195,9 @@ export async function createSale(formData) {
       // Create new sale
       invoiceId = await getNextInvoiceNumber();
 
-      const cashCollected = data.paymentType === "cash" ? newTotalAmount : 0;
-      const creditRemaining = data.paymentType === "credit" ? newTotalAmount : 0;
+      // Always set to 0 by default - user can update via Cash & Credit form
+      const cashCollected = 0;
+      const creditRemaining = 0;
       sale = await Sale.create({
         invoiceId,
         date,

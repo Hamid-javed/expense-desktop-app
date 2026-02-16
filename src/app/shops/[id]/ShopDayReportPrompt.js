@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 
-export function ShopDayReportPrompt({ shopId, reportDate }) {
+export function ShopDayReportPrompt({ shopId, reportDate, disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [otName, setOtName] = useState("");
   const [date, setDate] = useState(
@@ -32,7 +32,8 @@ export function ShopDayReportPrompt({ shopId, reportDate }) {
           setDate(reportDate || new Date().toISOString().slice(0, 10));
           setIsOpen(true);
         }}
-        className="text-xs text-slate-600 underline hover:text-slate-900"
+        disabled={disabled}
+        className={`text-xs ${disabled ? 'text-slate-400 cursor-not-allowed no-underline' : 'text-slate-600 underline hover:text-slate-900'}`}
       >
         Download / Print Day Report
       </button>

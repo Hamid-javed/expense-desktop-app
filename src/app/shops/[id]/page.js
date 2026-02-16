@@ -30,7 +30,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
 
   const search = await searchParams;
   const todayStr = getTodayPK();
-  const dateRange = search?.range === "date" ? "date" : "all";
+  const dateRange = search?.range === "all" ? "all" : "date";
   const selectedDateStr =
     typeof search?.date === "string" && search.date.length > 0
       ? search.date
@@ -140,10 +140,10 @@ export default async function ShopDetailPage({ params, searchParams }) {
                     status={sale.status || "unpaid"}
                   />
                   <div className="text-xs text-slate-500 capitalize">
-                    {sale.paymentType}
+                    Payment Type: {sale.paymentType}
                   </div>
                   <div className="text-sm font-semibold text-slate-700">
-                    {sale.totalAmount.toLocaleString(undefined, {
+                    Total Amount: {sale.totalAmount.toLocaleString(undefined, {
                       maximumFractionDigits: 2,
                     })}
                   </div>
@@ -406,7 +406,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
           description={`${allSales.length} invoice${allSales.length !== 1 ? "s" : ""}`}
           actions={
             dateRange === "date" ? (
-              <ShopDayReportPrompt shopId={id} reportDate={selectedDateStr} />
+              <ShopDayReportPrompt shopId={id} reportDate={selectedDateStr} disabled={allSales.length === 0} />
             ) : null
           }
         />
