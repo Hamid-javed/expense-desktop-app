@@ -10,10 +10,10 @@ export function DownloadUnpaidInvoicesButton() {
   const handleDownload = async () => {
     setError(null);
     setIsDownloading(true);
-    
+
     try {
-      const response = await fetch("/api/reports/staff/unpaid-invoices");
-      
+      const response = await fetch("/api/reports/order-takers/unpaid-invoices");
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || "Failed to download report";
@@ -22,12 +22,10 @@ export function DownloadUnpaidInvoicesButton() {
         return;
       }
 
-      // Get filename from Content-Disposition header
       const contentDisposition = response.headers.get("Content-Disposition");
       const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
       const filename = filenameMatch ? filenameMatch[1] : `unpaid-invoices-${Date.now()}.xlsx`;
 
-      // Download file
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -38,8 +36,8 @@ export function DownloadUnpaidInvoicesButton() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       setIsDownloading(false);
-    } catch (error) {
-      console.error("Download error:", error);
+    } catch (err) {
+      console.error("Download error:", err);
       setError("An error occurred while downloading the report. Please try again.");
       setIsDownloading(false);
     }
@@ -55,9 +53,7 @@ export function DownloadUnpaidInvoicesButton() {
       >
         {isDownloading ? "Downloading..." : "Download combined Report"}
       </Button>
-      {error && (
-        <span className="text-xs text-red-600">{error}</span>
-      )}
+      {error && <span className="text-xs text-red-600">{error}</span>}
     </div>
   );
 }

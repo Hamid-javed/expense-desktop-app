@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "../../../../../lib/db";
 import { Sale } from "../../../../../models/Sale";
-import { Shop } from "../../../../../models/Shop";
-import { Staff } from "../../../../../models/Staff";
 import { formatDatePK, getDaysExceeded, getTodayPK, getDateKeyPK } from "../../../../../lib/dateUtils";
 import { INVOICE_PREFIX } from "../../../../../lib/config";
 import ExcelJS from "exceljs";
@@ -11,31 +9,34 @@ export async function GET(req) {
   await connectToDatabase();
 
   const { searchParams } = new URL(req.url);
-  const staffId = searchParams.get("staffId");
+  const orderTakerId = searchParams.get("orderTakerId");
 
-  // Build query for unpaid invoices (check both status and creditRemaining)
+  // Build query for unpaid invoices (status=unpaid only; amount remaining is derived below)
   const query = {
     deletedAt: null,
     status: "unpaid",
-    creditRemaining: { $gt: 0 }
   };
 
-  // Filter by staff if staffId is provided
-  if (staffId) {
-    query.staffId = staffId;
+  // Filter by order taker if orderTakerId is provided
+  if (orderTakerId) {
+    query.orderTakerId = orderTakerId;
   }
 
   // Fetch unpaid invoices
   const sales = await Sale.find(query)
     .populate("shopId", "name")
-    .populate("staffId", "name")
+    .populate("orderTakerId", "name number")
     .sort({ date: 1 })
     .lean();
 
-  // Filter to only include unpaid sales with credit remaining > 0
-  const unpaidSales = sales.filter(sale => 
-    sale.status === "unpaid" && (sale.creditRemaining ?? 0) > 0
-  );
+  // Unpaid = status unpaid AND amount still owed > 0
+  const unpaidSales = sales.filter((sale) => {
+    const total = sale.totalAmount ?? 0;
+    const cash = sale.cashCollected ?? 0;
+    const credit = sale.creditRemaining ?? 0;
+    const amountRemaining = credit > 0 ? credit : total - cash;
+    return sale.status === "unpaid" && amountRemaining > 0;
+  });
 
   if (unpaidSales.length === 0) {
     return NextResponse.json(
@@ -48,21 +49,18 @@ export async function GET(req) {
 
   // Prepare data rows
   const rows = unpaidSales.map((sale) => {
-    // Format date as MM/DD/YYYY to match the image format
     const dateKey = getDateKeyPK(sale.date);
-    const [year, month, day] = dateKey.split('-');
+    const [year, month, day] = dateKey.split("-");
     const deliveryDate = `${month}/${day}/${year}`;
     const aging = getDaysExceeded(sale.date, todayStr);
-    
-    // Calculate amount remaining: totalAmount - cashCollected
-    // For unpaid invoices, this is the amount that still needs to be paid
+
     const totalAmount = sale.totalAmount ?? 0;
     const cashCollected = sale.cashCollected ?? 0;
     const amountRemaining = totalAmount - cashCollected;
-    
+
     return {
       storeName: sale.shopId?.name || "-",
-      orderbookerName: sale.staffId?.name || "-",
+      orderTakerName: sale.orderTakerId?.name || "-",
       invoiceNumber: `${INVOICE_PREFIX}${sale.invoiceId}`,
       deliveryDate: deliveryDate,
       amountRemaining: amountRemaining,
@@ -72,93 +70,79 @@ export async function GET(req) {
 
   // Sort by aging (descending) then by store name
   rows.sort((a, b) => {
-    if (b.aging !== a.aging) {
-      return b.aging - a.aging;
-    }
+    if (b.aging !== a.aging) return b.aging - a.aging;
     return a.storeName.localeCompare(b.storeName);
   });
 
-  // Create workbook and worksheet
   const workbook = new ExcelJS.Workbook();
-  const worksheetName = staffId && rows.length > 0 
-    ? `Unpaid Invoices - ${rows[0].orderbookerName}`
-    : "Unpaid Invoices";
+  const worksheetName =
+    orderTakerId && rows.length > 0
+      ? `Unpaid Invoices - ${rows[0].orderTakerName}`
+      : "Unpaid Invoices";
   const worksheet = workbook.addWorksheet(worksheetName);
 
-  // Set column widths
   worksheet.columns = [
     { width: 30 }, // Store Name
-    { width: 20 }, // Orderbooker Name
+    { width: 20 }, // Order Taker
     { width: 18 }, // Invoice Number
     { width: 15 }, // Delivery Date
     { width: 18 }, // Amount Remaining
     { width: 10 }, // Aging
   ];
 
-  // Define styles
   const headerStyle = {
     font: { bold: true, color: { argb: "FFFFFFFF" } },
     fill: {
       type: "pattern",
       pattern: "solid",
-      fgColor: { argb: "FF1E3A8A" }
+      fgColor: { argb: "FF1E3A8A" },
     },
-    alignment: { horizontal: "left", vertical: "center" }
+    alignment: { horizontal: "left", vertical: "center" },
   };
 
   const agingRedStyle = {
     font: { bold: true, color: { argb: "FFFF0000" } },
-    alignment: { horizontal: "center", vertical: "center" }
+    alignment: { horizontal: "center", vertical: "center" },
   };
 
   const agingNormalStyle = {
     font: { color: { argb: "FF000000" } },
-    alignment: { horizontal: "center", vertical: "center" }
+    alignment: { horizontal: "center", vertical: "center" },
   };
 
   const totalStyle = {
-    font: { bold: true, color: { argb: "FF000000" } }
+    font: { bold: true, color: { argb: "FF000000" } },
   };
 
-  // Add header row
   const headerRow = worksheet.addRow([
     "Store Name",
-    "Orderbooker Name",
+    "Order Taker",
     "Invoice Number",
     "Delivery Date",
     "Amount Remaining",
-    "Aging"
+    "Aging",
   ]);
 
-  // Apply header style
   headerRow.eachCell((cell) => {
     cell.style = headerStyle;
   });
 
-  // Add data rows
   rows.forEach((row) => {
     const dataRow = worksheet.addRow([
       row.storeName,
-      row.orderbookerName,
+      row.orderTakerName,
       row.invoiceNumber,
       row.deliveryDate,
       row.amountRemaining,
-      row.aging
+      row.aging,
     ]);
 
-    // Format amount remaining column (column 5, 1-indexed) - no forced decimals
     dataRow.getCell(5).numFmt = "#,##0";
 
-    // Style aging column (column 6, 1-indexed): red and bold if >= 8 days
     const agingCell = dataRow.getCell(6);
-    if (row.aging >= 8) {
-      agingCell.style = agingRedStyle;
-    } else {
-      agingCell.style = agingNormalStyle;
-    }
+    agingCell.style = row.aging >= 8 ? agingRedStyle : agingNormalStyle;
   });
 
-  // Calculate and add total row
   const totalAmountRemaining = rows.reduce((sum, row) => sum + row.amountRemaining, 0);
   const totalRow = worksheet.addRow([
     "",
@@ -166,24 +150,21 @@ export async function GET(req) {
     "",
     "",
     totalAmountRemaining,
-    ""
+    "",
   ]);
 
-  // Style total row
   const totalAmountCell = totalRow.getCell(5);
   totalAmountCell.style = totalStyle;
   totalAmountCell.numFmt = "#,##0";
 
-  // Generate buffer
   const buffer = await workbook.xlsx.writeBuffer();
 
-  // Get staff name for filename if filtering by staff
-  let staffName = "";
-  if (staffId && rows.length > 0) {
-    staffName = rows[0].orderbookerName.replace(/[^a-zA-Z0-9]/g, "-");
+  let orderTakerNameForFile = "";
+  if (orderTakerId && rows.length > 0) {
+    orderTakerNameForFile = rows[0].orderTakerName.replace(/[^a-zA-Z0-9]/g, "-");
   }
-  const filename = staffId 
-    ? `unpaid-invoices-${staffName}-${todayStr}.xlsx`
+  const filename = orderTakerId
+    ? `unpaid-invoices-${orderTakerNameForFile}-${todayStr}.xlsx`
     : `unpaid-invoices-${todayStr}.xlsx`;
 
   return new NextResponse(buffer, {

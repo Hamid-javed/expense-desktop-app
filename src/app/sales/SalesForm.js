@@ -5,12 +5,19 @@ import { Table, THead, TBody, TR, TH, TD } from "../../components/ui/Table";
 import { Button } from "../../components/ui/Button";
 import { PAYMENT_TYPES } from "../../lib/config";
 
-export function SalesForm({ staff, shops, products, createSale }) {
+export function SalesForm({ staff, shops, products, orderTakers = [], createSale }) {
   const [rows, setRows] = useState([
     { productId: "", quantity: "", price: "" },
   ]);
   const [paymentType, setPaymentType] = useState(PAYMENT_TYPES[0]);
   const [formError, setFormError] = useState(null);
+  const defaultDate = (() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  })();
 
   const addRow = () => {
     setRows((prev) => [...prev, { productId: "", quantity: "", price: "" }]);
@@ -128,13 +135,32 @@ export function SalesForm({ staff, shops, products, createSale }) {
             name="date"
             required
             className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
-            defaultValue={(() => {
-              const now = new Date();
-              const year = now.getFullYear();
-              const month = String(now.getMonth() + 1).padStart(2, '0');
-              const day = String(now.getDate()).padStart(2, '0');
-              return `${year}-${month}-${day}`;
-            })()}
+            defaultValue={defaultDate}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+          <span>Order Taker (OT)</span>
+          <select
+            name="orderTakerId"
+            required
+            className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
+          >
+            <option value="">Select order taker</option>
+            {orderTakers.map((ot) => (
+              <option key={ot._id} value={ot._id}>
+                {ot.name} ({ot.number})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+          <span>Order Take Date</span>
+          <input
+            type="date"
+            name="orderTakeDate"
+            required
+            className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
+            defaultValue={defaultDate}
           />
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">

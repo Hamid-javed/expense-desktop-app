@@ -7,65 +7,6 @@ import { Table, TR, TD } from "../../components/ui/Table";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 
-function DownloadStaffReportButton({ staffId }) {
-  const [error, setError] = useState(null);
-  const [isDownloading, setIsDownloading] = useState(false);
-
-  const handleDownload = async () => {
-    setError(null);
-    setIsDownloading(true);
-    
-    try {
-      const response = await fetch(`/api/reports/staff/unpaid-invoices?staffId=${staffId}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || "Failed to download report";
-        setError(errorMessage);
-        setIsDownloading(false);
-        return;
-      }
-
-      // Get filename from Content-Disposition header
-      const contentDisposition = response.headers.get("Content-Disposition");
-      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
-      const filename = filenameMatch ? filenameMatch[1] : `unpaid-invoices-${Date.now()}.xlsx`;
-
-      // Download file
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      setIsDownloading(false);
-    } catch (error) {
-      console.error("Download error:", error);
-      setError("An error occurred while downloading the report. Please try again.");
-      setIsDownloading(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <Button
-        variant="outline"
-        className="h-7 px-2 text-xs"
-        onClick={handleDownload}
-        disabled={isDownloading}
-      >
-        {isDownloading ? "..." : "Download Report"}
-      </Button>
-      {error && (
-        <span className="text-xs text-red-600 whitespace-nowrap">{error}</span>
-      )}
-    </div>
-  );
-}
-
 function SubmitButton({ onCancel, formId, isSubmitting }) {
   return (
     <div className="flex items-center gap-1">
@@ -162,7 +103,6 @@ export function StaffRow({ staff, routes, updateStaff, toggleStaffActive }) {
                   View Sales
                 </Button>
               </Link>
-              <DownloadStaffReportButton staffId={staff._id} />
               <Button
                 type="button"
                 variant="ghost"

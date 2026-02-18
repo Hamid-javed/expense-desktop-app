@@ -21,6 +21,10 @@ class SaleModel extends SQLiteModel {
     if (obj.date) {
       obj.date = new Date(obj.date);
     }
+    // Convert orderTakeDate from integer to Date
+    if (obj.orderTakeDate) {
+      obj.orderTakeDate = new Date(obj.orderTakeDate);
+    }
     return obj;
   }
 
@@ -33,6 +37,12 @@ class SaleModel extends SQLiteModel {
     // Convert date from Date to integer
     if (row.date instanceof Date) {
       row.date = row.date.getTime();
+    }
+    // Convert orderTakeDate from Date to integer
+    if (row.orderTakeDate instanceof Date) {
+      row.orderTakeDate = row.orderTakeDate.getTime();
+    } else if (row.orderTakeDate === null || row.orderTakeDate === undefined) {
+      row.orderTakeDate = null;
     }
     return row;
   }
@@ -53,6 +63,10 @@ class SaleModel extends SQLiteModel {
     if (query.staffId) {
       sql += ` AND staffId = ?`;
       params.push(query.staffId);
+    }
+    if (query.orderTakerId) {
+      sql += ` AND orderTakerId = ?`;
+      params.push(query.orderTakerId);
     }
     if (query.date) {
       if (typeof query.date === 'object') {
@@ -148,6 +162,10 @@ class SaleModel extends SQLiteModel {
     if (query.staffId) {
       sql += ` AND staffId = ?`;
       params.push(query.staffId);
+    }
+    if (query.orderTakerId) {
+      sql += ` AND orderTakerId = ?`;
+      params.push(query.orderTakerId);
     }
     if (query.date) {
       if (typeof query.date === 'object') {

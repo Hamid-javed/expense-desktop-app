@@ -206,19 +206,29 @@ export default async function ShopDetailPage({ params, searchParams }) {
       : { shopId: id, deletedAt: null };
   const allSales = await Sale.find(saleFilter)
     .populate("staffId", "name staffId")
+    .populate("orderTakerId", "name number")
     .sort({ date: -1 })
     .lean();
 
+  // When "All time": limit table and print to last 30 days only
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
+  const displaySales =
+    dateRange === "all"
+      ? allSales.filter((s) => new Date(s.date) >= thirtyDaysAgo)
+      : allSales;
+
   const salesByDate = {};
-  allSales.forEach((sale) => {
+  displaySales.forEach((sale) => {
     const dateKey = getDateKeyPK(sale.date);
     if (!salesByDate[dateKey]) salesByDate[dateKey] = [];
     salesByDate[dateKey].push(sale);
   });
 
-  const totalSales = allSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
-  const totalCash = allSales.reduce((sum, s) => sum + (s.cashCollected ?? 0), 0);
-  const totalCredit = allSales.reduce((sum, s) => sum + (s.creditRemaining ?? 0), 0);
+  const totalSales = displaySales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+  const totalCash = displaySales.reduce((sum, s) => sum + (s.cashCollected ?? 0), 0);
+  const totalCredit = displaySales.reduce((sum, s) => sum + (s.creditRemaining ?? 0), 0);
 
   const route = shop.routeId
     ? await RouteModel.findById(shop.routeId).populate("assignedStaff").lean()
@@ -228,7 +238,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
 
   const staffIds = [
     ...new Set(
-      allSales
+      displaySales
         .map((s) => s.staffId?._id?.toString() || s.staffId?.toString())
         .filter(Boolean)
     ),
@@ -341,10 +351,10 @@ export default async function ShopDetailPage({ params, searchParams }) {
           </CardBody>
         </Card>
         <Card>
-          <CardHeader title={dateRange === "date" ? "Total Days" : "Invoices"} />
+          <CardHeader title={dateRange === "date" ? "Total Days" : "Invoices (last 30 days)"} />
           <CardBody>
             <div className="text-2xl font-semibold">
-              {dateRange === "date" ? sortedDates.length : allSales.length}
+              {dateRange === "date" ? sortedDates.length : displaySales.length}
             </div>
           </CardBody>
         </Card>
@@ -357,7 +367,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
           <CardBody>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {staffMembers.map((staff) => {
-                const staffSales = allSales.filter(
+                const staffSales = displaySales.filter(
                   (s) =>
                     (s.staffId?._id?.toString() || s.staffId?.toString()) ===
                     staff._id.toString()
@@ -403,19 +413,21 @@ export default async function ShopDetailPage({ params, searchParams }) {
               ? "All invoices"
               : `Sales - ${selectedDateStr === todayStr ? "Today" : selectedDateStr}`
           }
-          description={`${allSales.length} invoice${allSales.length !== 1 ? "s" : ""}`}
+          description={`${displaySales.length} invoice${displaySales.length !== 1 ? "s" : ""}${dateRange === "all" ? " (last 30 days)" : ""}`}
           actions={
             dateRange === "date" ? (
-              <ShopDayReportPrompt shopId={id} reportDate={selectedDateStr} disabled={allSales.length === 0} />
-            ) : null
+              <ShopDayReportPrompt shopId={id} reportDate={selectedDateStr} disabled={displaySales.length === 0} />
+            ) : (
+              <ShopDayReportPrompt shopId={id} days={30} disabled={displaySales.length === 0} />
+            )
           }
         />
         <CardBody>
-          {allSales.length === 0 ? (
+          {displaySales.length === 0 ? (
             <p className="py-8 text-center text-slate-500">
               {dateRange === "date"
                 ? "No sales for this shop on the selected date."
-                : "No sales for this shop."}
+                : "No sales for this shop in the last 30 days."}
             </p>
           ) : (
             <Table>
@@ -423,6 +435,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
                 <TR>
                   <TH>Invoice #</TH>
                   <TH>Date</TH>
+                  <TH>OT</TH>
                   <TH>Staff</TH>
                   <TH className="text-right">Amount</TH>
                   <TH className="text-right">Cash</TH>
@@ -432,7 +445,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
                 </TR>
               </THead>
               <TBody>
-                {allSales.map((sale) => (
+                {displaySales.map((sale) => (
                   <TR key={sale._id.toString()}>
                     <TD className="font-mono text-xs">
                       {INVOICE_PREFIX}
@@ -444,6 +457,10 @@ export default async function ShopDetailPage({ params, searchParams }) {
                         day: "numeric",
                         year: "numeric",
                       })}
+                    </TD>
+                    <TD>
+                      {sale.orderTakerId?.name || "-"}
+                      {sale.orderTakerId?.number ? ` (${sale.orderTakerId.number})` : ""}
                     </TD>
                     <TD>
                       {sale.staffId?.name || "-"}

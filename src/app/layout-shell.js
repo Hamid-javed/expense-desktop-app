@@ -11,6 +11,7 @@ const baseNavItems = [
   { href: "/staff", label: "Staff" },
   { href: "/shops", label: "Shops" },
   { href: "/routes", label: "Routes" },
+  { href: "/order-takers", label: "Order Takers" },
   { href: "/sales", label: "Sales" },
 ];
 

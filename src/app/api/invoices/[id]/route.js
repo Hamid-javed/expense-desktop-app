@@ -4,6 +4,7 @@ import { Sale } from "../../../../models/Sale";
 import { Shop } from "../../../../models/Shop";
 import { Staff } from "../../../../models/Staff";
 import { RouteModel } from "../../../../models/Route";
+import { OrderTaker } from "../../../../models/OrderTaker";
 import { generateInvoicePdf } from "../../../../lib/invoice";
 import { INVOICE_PREFIX } from "../../../../lib/config";
 
@@ -11,8 +12,8 @@ export async function GET(req, { params }) {
   await connectToDatabase();
   const { id } = await params;
   const { searchParams } = new URL(req.url);
-  const otName = searchParams.get("ot") || null;
-  const dateStr = searchParams.get("date") || null;
+  const fallbackOtName = searchParams.get("ot") || null;
+  const fallbackOtDate = searchParams.get("date") || null;
 
   const sale = await Sale.findById(id).populate("shopId").populate("staffId");
   if (!sale) {
@@ -30,7 +31,7 @@ export async function GET(req, { params }) {
     : null;
 
   // Load products for human-readable names
-  const populatedSale = sale.toObject();
+  const populatedSale = typeof sale?.toObject === "function" ? sale.toObject() : { ...sale };
   const populatedItems = [];
   for (const item of populatedSale.items) {
     const product = await import("../../../../models/Product.js").then(
@@ -44,12 +45,28 @@ export async function GET(req, { params }) {
   }
   populatedSale.items = populatedItems;
 
+  let otName = fallbackOtName;
+  let otNumber = null;
+  let otDate = fallbackOtDate;
+  if (sale.orderTakerId) {
+    const orderTaker = await OrderTaker.findById(sale.orderTakerId).lean();
+    if (orderTaker) {
+      otName = orderTaker.name || fallbackOtName;
+      otNumber = orderTaker.number || null;
+      if (sale.orderTakeDate) {
+        const d = sale.orderTakeDate instanceof Date ? sale.orderTakeDate : new Date(sale.orderTakeDate);
+        otDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+    }
+  }
+
   const bytes = await generateInvoicePdf(populatedSale, {
     shop,
     staff,
     route,
     otName,
-    otDate: dateStr,
+    otNumber,
+    otDate,
   });
 
   const response = new NextResponse(bytes, {

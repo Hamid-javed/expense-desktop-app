@@ -89,6 +89,21 @@ function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_staff_deleted ON staff(deletedAt);
   `);
 
+  // Order Takers table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS order_takers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      number TEXT NOT NULL,
+      cnic TEXT,
+      isActive INTEGER DEFAULT 1,
+      deletedAt INTEGER,
+      createdAt INTEGER,
+      updatedAt INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_order_takers_deleted ON order_takers(deletedAt);
+  `);
+
   // Shops table
   db.exec(`
     CREATE TABLE IF NOT EXISTS shops (
@@ -164,6 +179,20 @@ function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_sales_shopId ON sales(shopId);
     CREATE INDEX IF NOT EXISTS idx_sales_deleted ON sales(deletedAt);
   `);
+
+  // Migrate sales table: add orderTakerId and orderTakeDate if they don't exist
+  try {
+    const salesColumns = db.prepare("PRAGMA table_info(sales)").all();
+    const colNames = salesColumns.map((c) => c.name);
+    if (!colNames.includes("orderTakerId")) {
+      db.exec("ALTER TABLE sales ADD COLUMN orderTakerId INTEGER REFERENCES order_takers(id)");
+    }
+    if (!colNames.includes("orderTakeDate")) {
+      db.exec("ALTER TABLE sales ADD COLUMN orderTakeDate INTEGER");
+    }
+  } catch (e) {
+    // Ignore migration errors (e.g. column already exists from manual migration)
+  }
 
   // Daily Sales Summary table
   db.exec(`

@@ -9,7 +9,6 @@ import { Button } from "../../components/ui/Button";
 import Link from "next/link";
 import { createStaff, updateStaff, toggleStaffActive } from "./actions";
 import { StaffRow } from "./StaffRow";
-import { DownloadUnpaidInvoicesButton } from "./DownloadUnpaidInvoicesButton";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +36,6 @@ export default async function StaffPage() {
       <PageHeader
         title="Staff"
         description="Manage sales staff, routes, and their status."
-        actions={
-          <DownloadUnpaidInvoicesButton />
-        }
       />
       <Card>
         <CardBody>

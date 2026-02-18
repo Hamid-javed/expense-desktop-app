@@ -58,6 +58,7 @@ async function getReference(fieldName, id) {
     productId: () => import("./Product.js").then((m) => m.Product),
     routeId: () => import("./Route.js").then((m) => m.RouteModel),
     assignedStaff: () => import("./Staff.js").then((m) => m.Staff),
+    orderTakerId: () => import("./OrderTaker.js").then((m) => m.OrderTaker),
   };
 
   const modelLoader = modelMap[fieldName];

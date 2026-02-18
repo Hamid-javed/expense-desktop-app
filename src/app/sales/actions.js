@@ -13,6 +13,8 @@ const saleSchema = z.object({
   date: z.string(),
   staffId: z.string().min(1),
   shopId: z.string().min(1),
+  orderTakerId: z.string().min(1),
+  orderTakeDate: z.string(),
   paymentType: z.enum(["cash", "credit"]),
   items: z
     .array(
@@ -53,6 +55,8 @@ export async function createSale(formData) {
       date: formData.get("date")?.trim(),
       staffId: formData.get("staffId")?.trim(),
       shopId: formData.get("shopId")?.trim(),
+      orderTakerId: formData.get("orderTakerId")?.trim(),
+      orderTakeDate: formData.get("orderTakeDate")?.trim() || formData.get("date")?.trim(),
       paymentType: formData.get("paymentType")?.trim(),
       items: rawItems,
     });
@@ -87,7 +91,8 @@ export async function createSale(formData) {
       }
     }
 
-    const date = parseDatePK(data.date); // Parse date in PK timezone
+    const date = parseDatePK(data.date);
+    const orderTakeDate = parseDatePK(data.orderTakeDate);
     const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
     const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 
@@ -189,7 +194,7 @@ export async function createSale(formData) {
       // Get the sale ID (handle both MongoDB _id and SQLite id)
       const saleId = existingSale._id || existingSale.id;
       
-      // Update the sale using SQLite-compatible method
+      // Update the sale using SQLite-compatible method (include order taker from form)
       sale = await Sale.findByIdAndUpdate(
         saleId,
         {
@@ -197,6 +202,8 @@ export async function createSale(formData) {
           totalAmount: mergedTotalAmount,
           cashCollected: (existingSale.cashCollected ?? 0) + newCash,
           creditRemaining: (existingSale.creditRemaining ?? 0) + newCredit,
+          orderTakerId: data.orderTakerId,
+          orderTakeDate,
         }
       );
     } else {
@@ -211,6 +218,8 @@ export async function createSale(formData) {
         date,
         staffId: data.staffId,
         shopId: data.shopId,
+        orderTakerId: data.orderTakerId,
+        orderTakeDate,
         items: itemsWithTotals,
         totalAmount: newTotalAmount,
         paymentType: data.paymentType,

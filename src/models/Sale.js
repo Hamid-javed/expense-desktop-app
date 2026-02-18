@@ -23,6 +23,8 @@ const SaleSchemaDef = new mongoose.Schema(
     date: { type: Date, required: true },
     staffId: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
     shopId: { type: mongoose.Schema.Types.ObjectId, ref: "Shop" },
+    orderTakerId: { type: mongoose.Schema.Types.ObjectId, ref: "OrderTaker" },
+    orderTakeDate: { type: Date },
     items: [SaleItemSchema],
     totalAmount: { type: Number, required: true, min: 0 },
     paymentType: { type: String, enum: PAYMENT_TYPES, required: true },
