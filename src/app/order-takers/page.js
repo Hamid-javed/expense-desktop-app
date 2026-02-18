@@ -1,4 +1,7 @@
 import { connectToDatabase } from "../../lib/db";
+import { requireUserId } from "../../lib/auth";
+import { withUserId } from "../../lib/tenant";
+import { serializeForClient } from "../../lib/serialize";
 import { OrderTaker } from "../../models/OrderTaker";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
@@ -16,15 +19,13 @@ import { DownloadUnpaidInvoicesButton } from "./DownloadUnpaidInvoicesButton";
 export const dynamic = "force-dynamic";
 
 export default async function OrderTakersPage() {
+  const userId = await requireUserId();
   await connectToDatabase();
-  const orderTakersRaw = await OrderTaker.find({ deletedAt: null })
+  const orderTakersRaw = await OrderTaker.find(withUserId(userId, { deletedAt: null }))
     .sort({ name: 1 })
     .lean();
 
-  const orderTakers = orderTakersRaw.map((ot) => ({
-    ...ot,
-    _id: ot._id.toString(),
-  }));
+  const orderTakers = serializeForClient(orderTakersRaw);
 
   return (
     <div className="space-y-4">

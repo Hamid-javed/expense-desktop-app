@@ -1,4 +1,7 @@
 import { connectToDatabase } from "../../lib/db";
+import { requireUserId } from "../../lib/auth";
+import { withUserId } from "../../lib/tenant";
+import { serializeForClient } from "../../lib/serialize";
 import { Staff } from "../../models/Staff";
 import { RouteModel } from "../../models/Route";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -13,23 +16,15 @@ import { StaffRow } from "./StaffRow";
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
+  const userId = await requireUserId();
   await connectToDatabase();
   const [staffRaw, routesRaw] = await Promise.all([
-    Staff.find({ deletedAt: null }).sort({ createdAt: -1 }).lean(),
-    RouteModel.find({ deletedAt: null }).sort({ name: 1 }).lean(),
+    Staff.find(withUserId(userId, { deletedAt: null })).sort({ createdAt: -1 }).lean(),
+    RouteModel.find(withUserId(userId, { deletedAt: null })).sort({ name: 1 }).lean(),
   ]);
 
-  // Serialize ObjectIds to strings for form handling
-  const staff = staffRaw.map((s) => ({
-    ...s,
-    _id: s._id.toString(),
-    routeId: s.routeId?.toString(),
-  }));
-  const routes = routesRaw.map((r) => ({
-    ...r,
-    _id: r._id.toString(),
-    assignedStaff: r.assignedStaff?.toString(),
-  }));
+  const staff = serializeForClient(staffRaw);
+  const routes = serializeForClient(routesRaw);
 
   return (
     <div className="space-y-4">

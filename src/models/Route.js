@@ -4,7 +4,8 @@ import { RouteModel as SQLiteRouteModel } from "./sqlite/Route.js";
 
 const RouteSchemaDef = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true, unique: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    name: { type: String, required: true, trim: true },
     assignedStaff: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
     // Shops are linked from Shop.routeId; we keep this field for quick reverse lookups if needed
     shopIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Shop" }],

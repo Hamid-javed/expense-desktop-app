@@ -4,6 +4,7 @@ import { Shop as SQLiteShop } from "./sqlite/Shop.js";
 
 const ShopSchemaDef = new mongoose.Schema(
   {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
     ownerName: { type: String, trim: true },
     phone: { type: String, trim: true },

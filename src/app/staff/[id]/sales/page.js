@@ -1,4 +1,6 @@
 import { connectToDatabase } from "../../../../lib/db";
+import { requireUserId } from "../../../../lib/auth";
+import { withUserId } from "../../../../lib/tenant";
 import { Staff } from "../../../../models/Staff";
 import { Sale } from "../../../../models/Sale";
 import "../../../../models/Product"; // Register Product for Sale.populate("items.productId")
@@ -17,6 +19,7 @@ import { getTodayPK, getStartOfDayPK, getEndOfDayPK, getDateKeyPK, formatDatePK,
 export const dynamic = "force-dynamic";
 
 export default async function StaffSalesPage({ params, searchParams }) {
+  const userId = await requireUserId();
   await connectToDatabase();
   const { id } = await params;
 
@@ -30,7 +33,7 @@ export default async function StaffSalesPage({ params, searchParams }) {
   const startOfDay = getStartOfDayPK(selectedDateStr);
   const endOfDay = getEndOfDayPK(selectedDateStr);
 
-  const staff = await Staff.findById(id).lean();
+  const staff = await Staff.findOne(withUserId(userId, { _id: id })).lean();
   if (!staff) {
     return (
       <div className="space-y-4">
@@ -50,24 +53,22 @@ export default async function StaffSalesPage({ params, searchParams }) {
   }
 
   // Fetch sales for this staff member on the selected date
-  const sales = await Sale.find({
-    staffId: id,
-    deletedAt: null,
-    date: {
-      $gte: startOfDay,
-      $lte: endOfDay,
-    },
-  })
+  const sales = await Sale.find(
+    withUserId(userId, {
+      staffId: id,
+      deletedAt: null,
+      date: { $gte: startOfDay, $lte: endOfDay },
+    })
+  )
     .populate("shopId", "name phone ownerName")
     .populate("items.productId", "name sku unit")
     .sort({ date: -1 })
     .lean();
 
   // Fetch ALL daily summaries for this staff to calculate totals
-  const allDailySummaries = await DailySalesSummary.find({
-    staffId: id,
-    deletedAt: null,
-  })
+  const allDailySummaries = await DailySalesSummary.find(
+    withUserId(userId, { staffId: id, deletedAt: null })
+  )
     .lean();
 
   // Group sales by date using PK timezone
@@ -99,14 +100,13 @@ export default async function StaffSalesPage({ params, searchParams }) {
   const totalSales = totalCash + totalCredit;
 
   // Calculate total cash per shop for the selected date only
-  const salesForSelectedDate = await Sale.find({
-    staffId: id,
-    deletedAt: null,
-    date: {
-      $gte: startOfDay,
-      $lte: endOfDay,
-    },
-  })
+  const salesForSelectedDate = await Sale.find(
+    withUserId(userId, {
+      staffId: id,
+      deletedAt: null,
+      date: { $gte: startOfDay, $lte: endOfDay },
+    })
+  )
     .populate("shopId", "name")
     .lean();
 
@@ -150,14 +150,13 @@ export default async function StaffSalesPage({ params, searchParams }) {
     const todayStartOfDay = getStartOfDayPK(todayStr);
     const todayEndOfDay = getEndOfDayPK(todayStr);
 
-    todaySales = await Sale.find({
-      staffId: id,
-      deletedAt: null,
-      date: {
-        $gte: todayStartOfDay,
-        $lte: todayEndOfDay,
-      },
-    }).lean();
+    todaySales = await Sale.find(
+      withUserId(userId, {
+        staffId: id,
+        deletedAt: null,
+        date: { $gte: todayStartOfDay, $lte: todayEndOfDay },
+      })
+    ).lean();
 
     todayTotalSales = todaySales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
     todayCashSales = todaySales
@@ -169,7 +168,7 @@ export default async function StaffSalesPage({ params, searchParams }) {
   }
 
   const route = staff.routeId
-    ? await RouteModel.findById(staff.routeId).lean()
+    ? await RouteModel.findOne(withUserId(userId, { _id: staff.routeId })).lean()
     : null;
 
   const sortedDates = Object.keys(salesByDate).sort((a, b) => b.localeCompare(a));

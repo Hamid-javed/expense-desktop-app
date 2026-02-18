@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "../../../../../lib/db";
+import { requireUserId } from "../../../../../lib/auth";
+import { withUserId } from "../../../../../lib/tenant";
 import { Sale } from "../../../../../models/Sale";
 import { Staff } from "../../../../../models/Staff";
 import { RouteModel } from "../../../../../models/Route";
@@ -7,18 +9,24 @@ import { generateCombinedInvoicePdf } from "../../../../../lib/invoice";
 import { getStartOfDayPK, getEndOfDayPK } from "../../../../../lib/dateUtils";
 
 export async function GET(req, { params }) {
+  let userId;
+  try {
+    userId = await requireUserId();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   await connectToDatabase();
   const { staffId } = await params;
   const { searchParams } = new URL(req.url);
   const dateStr = searchParams.get("date");
 
-  const staff = await Staff.findById(staffId).lean();
+  const staff = await Staff.findOne(withUserId(userId, { _id: staffId })).lean();
   if (!staff) {
     return NextResponse.json({ error: "Staff not found" }, { status: 404 });
   }
 
   const route = staff.routeId
-    ? await RouteModel.findById(staff.routeId).lean()
+    ? await RouteModel.findOne(withUserId(userId, { _id: staff.routeId })).lean()
     : null;
 
   if (!dateStr) {
@@ -31,11 +39,13 @@ export async function GET(req, { params }) {
   const startOfDay = getStartOfDayPK(dateStr);
   const endOfDay = getEndOfDayPK(dateStr);
 
-  const sales = await Sale.find({
-    staffId,
-    deletedAt: null,
-    date: { $gte: startOfDay, $lte: endOfDay },
-  })
+  const sales = await Sale.find(
+    withUserId(userId, {
+      staffId,
+      deletedAt: null,
+      date: { $gte: startOfDay, $lte: endOfDay },
+    })
+  )
     .populate("shopId")
     .lean();
 

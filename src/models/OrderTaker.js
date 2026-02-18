@@ -4,6 +4,7 @@ import { OrderTaker as SQLiteOrderTaker } from "./sqlite/OrderTaker.js";
 
 const OrderTakerSchemaDef = new mongoose.Schema(
   {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
     number: { type: String, required: true, trim: true },
     cnic: { type: String, trim: true },

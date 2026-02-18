@@ -1,6 +1,8 @@
 "use server";
 
-import { connectToDatabase } from "../../../../lib/db";
+import { connectToDatabase, isMongoDB } from "../../../../lib/db";
+import { requireUserId } from "../../../../lib/auth";
+import { withUserId } from "../../../../lib/tenant";
 import { DailySalesSummary } from "../../../../models/DailySalesSummary";
 import { Sale } from "../../../../models/Sale";
 import { Product } from "../../../../models/Product";
@@ -18,6 +20,7 @@ const dailySummarySchema = z.object({
 
 export async function upsertDailySalesSummary(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
 
     const rawData = {
@@ -36,11 +39,13 @@ export async function upsertDailySalesSummary(formData) {
     // Calculate total sales amount for this staff/date
     // Credit here means loans/credit given to shopkeepers, not credit sales
     // So we need to ensure cashSales + creditSales doesn't exceed total sales
-    const sales = await Sale.find({
-      staffId: validated.staffId,
-      deletedAt: null,
-      date: { $gte: startOfDay, $lte: endOfDay },
-    }).lean();
+    const sales = await Sale.find(
+      withUserId(userId, {
+        staffId: validated.staffId,
+        deletedAt: null,
+        date: { $gte: startOfDay, $lte: endOfDay },
+      })
+    ).lean();
 
     // Total sales amount (sum of all sales regardless of paymentType)
     const totalSalesAmount = sales.reduce(
@@ -65,19 +70,29 @@ export async function upsertDailySalesSummary(formData) {
 
     // Upsert: find or create, then update
     const summary = await DailySalesSummary.findOneAndUpdate(
-      {
+      withUserId(userId, {
         staffId: validated.staffId,
         date: startOfDay,
         deletedAt: null,
-      },
-      {
-        staffId: validated.staffId,
-        date: startOfDay,
-        cashSales: validated.cashSales,
-        creditSales: validated.creditSales,
-        isActive: true,
-        deletedAt: null,
-      },
+      }),
+      isMongoDB()
+        ? {
+            userId,
+            staffId: validated.staffId,
+            date: startOfDay,
+            cashSales: validated.cashSales,
+            creditSales: validated.creditSales,
+            isActive: true,
+            deletedAt: null,
+          }
+        : {
+            staffId: validated.staffId,
+            date: startOfDay,
+            cashSales: validated.cashSales,
+            creditSales: validated.creditSales,
+            isActive: true,
+            deletedAt: null,
+          },
       {
         upsert: true,
         new: true,
@@ -109,6 +124,7 @@ const updateSaleItemSchema = z.object({
 
 export async function updateSaleItemQuantity(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
 
     const rawData = {
@@ -120,7 +136,9 @@ export async function updateSaleItemQuantity(formData) {
     const validated = updateSaleItemSchema.parse(rawData);
 
     // Fetch the sale
-    const sale = await Sale.findById(validated.saleId).lean();
+    const sale = await Sale.findOne(
+      withUserId(userId, { _id: validated.saleId })
+    ).lean();
     if (!sale || sale.deletedAt) {
       return { success: false, error: "Sale not found" };
     }
@@ -145,7 +163,9 @@ export async function updateSaleItemQuantity(formData) {
     sale.totalAmount = sale.items.reduce((sum, it) => sum + it.lineTotal, 0);
 
     // Update product quantity and stats
-    const product = await Product.findById(item.productId);
+    const product = await Product.findOne(
+      withUserId(userId, { _id: item.productId })
+    );
     if (!product) {
       return { success: false, error: "Product not found" };
     }
@@ -158,23 +178,25 @@ export async function updateSaleItemQuantity(formData) {
     const saleTotalChange = sale.totalAmount - oldSaleTotal;
 
     // Update product
-    await Product.findByIdAndUpdate(item.productId, {
+    await Product.findOneAndUpdate(
+      withUserId(userId, { _id: item.productId }),
       $inc: {
-        quantity: quantityChange, // Add back if quantity decreased, subtract if increased
-        totalSold: quantityDiff, // Update total sold
-        totalRevenue: revenueChange, // Update revenue
+        quantity: quantityChange,
+        totalSold: quantityDiff,
+        totalRevenue: revenueChange,
       },
-    });
+    }
+    );
 
     // Note: currentCredit is now managed manually from the shop page only
     // Removed automatic currentCredit updates
 
     // Update the sale
     const saleIdValue = sale._id || sale.id;
-    await Sale.findByIdAndUpdate(saleIdValue, {
-      items: sale.items,
-      totalAmount: sale.totalAmount,
-    });
+    await Sale.findOneAndUpdate(
+      withUserId(userId, { _id: saleIdValue }),
+      { items: sale.items, totalAmount: sale.totalAmount }
+    );
 
     // Revalidate paths
     revalidatePath(`/staff/${sale.staffId}/sales`);

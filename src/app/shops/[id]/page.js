@@ -1,4 +1,6 @@
 import { connectToDatabase } from "../../../lib/db";
+import { requireUserId } from "../../../lib/auth";
+import { withUserId } from "../../../lib/tenant";
 import { Shop } from "../../../models/Shop";
 import { Sale } from "../../../models/Sale";
 import { Product } from "../../../models/Product";
@@ -25,6 +27,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function ShopDetailPage({ params, searchParams }) {
+  const userId = await requireUserId();
   await connectToDatabase();
   const { id } = await params;
 
@@ -37,7 +40,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
       : todayStr;
   const saleIdParam = typeof search?.saleId === "string" ? search.saleId.trim() : null;
 
-  const shop = await Shop.findById(id).lean();
+  const shop = await Shop.findOne(withUserId(userId, { _id: id })).lean();
   if (!shop) {
     return (
       <div className="space-y-4">
@@ -65,11 +68,9 @@ export default async function ShopDetailPage({ params, searchParams }) {
 
   // Single sale detail view
   if (saleIdParam) {
-    const sale = await Sale.findOne({
-      _id: saleIdParam,
-      shopId: id,
-      deletedAt: null,
-    })
+    const sale = await Sale.findOne(
+      withUserId(userId, { _id: saleIdParam, shopId: id, deletedAt: null })
+    )
       .populate("staffId", "name staffId")
       .populate("items.productId", "name sku unit")
       .lean();
@@ -202,8 +203,8 @@ export default async function ShopDetailPage({ params, searchParams }) {
   // Listing view: sales for shop (all time or by date)
   const saleFilter =
     dateRange === "date"
-      ? { shopId: id, deletedAt: null, date: { $gte: startOfDay, $lte: endOfDay } }
-      : { shopId: id, deletedAt: null };
+      ? withUserId(userId, { shopId: id, deletedAt: null, date: { $gte: startOfDay, $lte: endOfDay } })
+      : withUserId(userId, { shopId: id, deletedAt: null });
   const allSales = await Sale.find(saleFilter)
     .populate("staffId", "name staffId")
     .populate("orderTakerId", "name number")
@@ -231,7 +232,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
   const totalCredit = displaySales.reduce((sum, s) => sum + (s.creditRemaining ?? 0), 0);
 
   const route = shop.routeId
-    ? await RouteModel.findById(shop.routeId).populate("assignedStaff").lean()
+    ? await RouteModel.findOne(withUserId(userId, { _id: shop.routeId })).populate("assignedStaff").lean()
     : null;
 
   const sortedDates = Object.keys(salesByDate).sort((a, b) => b.localeCompare(a));
@@ -245,7 +246,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
   ];
   const staffMembers =
     staffIds.length > 0
-      ? await Staff.find({ _id: { $in: staffIds } }).lean()
+      ? await Staff.find(withUserId(userId, { _id: { $in: staffIds } })).lean()
       : [];
 
   return (

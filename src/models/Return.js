@@ -4,6 +4,7 @@ import { ReturnModel as SQLiteReturnModel } from "./sqlite/Return.js";
 
 const ReturnSchemaDef = new mongoose.Schema(
   {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     saleId: { type: mongoose.Schema.Types.ObjectId, ref: "Sale", required: true },
     productId: {
       type: mongoose.Schema.Types.ObjectId,

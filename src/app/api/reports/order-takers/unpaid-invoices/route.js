@@ -1,26 +1,28 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "../../../../../lib/db";
+import { requireUserId } from "../../../../../lib/auth";
+import { withUserId } from "../../../../../lib/tenant";
 import { Sale } from "../../../../../models/Sale";
 import { formatDatePK, getDaysExceeded, getTodayPK, getDateKeyPK } from "../../../../../lib/dateUtils";
 import { INVOICE_PREFIX } from "../../../../../lib/config";
 import ExcelJS from "exceljs";
 
 export async function GET(req) {
+  let userId;
+  try {
+    userId = await requireUserId();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   await connectToDatabase();
 
   const { searchParams } = new URL(req.url);
   const orderTakerId = searchParams.get("orderTakerId");
 
   // Build query for unpaid invoices (status=unpaid only; amount remaining is derived below)
-  const query = {
-    deletedAt: null,
-    status: "unpaid",
-  };
-
-  // Filter by order taker if orderTakerId is provided
-  if (orderTakerId) {
-    query.orderTakerId = orderTakerId;
-  }
+  const baseQuery = { deletedAt: null, status: "unpaid" };
+  if (orderTakerId) baseQuery.orderTakerId = orderTakerId;
+  const query = withUserId(userId, baseQuery);
 
   // Fetch unpaid invoices
   const sales = await Sale.find(query)

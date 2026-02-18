@@ -1,4 +1,7 @@
 import { connectToDatabase } from "../../lib/db";
+import { requireUserId } from "../../lib/auth";
+import { withUserId } from "../../lib/tenant";
+import { serializeForClient } from "../../lib/serialize";
 import { Staff } from "../../models/Staff";
 import { Shop } from "../../models/Shop";
 import { Product } from "../../models/Product";
@@ -12,52 +15,22 @@ import { createSale } from "./actions";
 export const dynamic = "force-dynamic";
 
 export default async function SalesPage() {
+  const userId = await requireUserId();
   await connectToDatabase();
 
   const [staff, shops, products, orderTakers] = await Promise.all([
-    Staff.find({ deletedAt: null, isActive: true }).sort({ name: 1 }).lean(),
-    Shop.find({ deletedAt: null, isActive: true }).sort({ name: 1 }).lean(),
-    Product.find({ deletedAt: null }).sort({ name: 1 }).lean(), // Show all non-deleted products for sales
-    OrderTaker.find({ deletedAt: null, isActive: true }).sort({ name: 1 }).lean(),
+    Staff.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
+    Shop.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
+    Product.find(withUserId(userId, { deletedAt: null })).sort({ name: 1 }).lean(),
+    OrderTaker.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
   ]);
 
-  // Serialize all ObjectIds to strings for client components (React requires plain objects)
-  const serialisedProducts = products.map((p) => ({
-    _id: p._id.toString(),
-    name: p.name,
-    sku: p.sku,
-    unit: p.unit,
-    price: p.price,
-    quantity: p.quantity ?? 0,
-    isActive: p.isActive,
-    totalSold: p.totalSold ?? 0,
-    totalRevenue: p.totalRevenue ?? 0,
-  }));
-
-  const serialisedStaff = staff.map((s) => ({
-    _id: s._id.toString(),
-    name: s.name,
-    phone: s.phone || "",
-    staffId: s.staffId || "",
-    routeId: s.routeId?.toString() || null,
-    isActive: s.isActive,
-  }));
-
-  const serialisedShops = shops.map((s) => ({
-    _id: s._id.toString(),
-    name: s.name,
-    ownerName: s.ownerName || "",
-    phone: s.phone || "",
-    currentCredit: s.currentCredit ?? 0,
-    routeId: s.routeId?.toString() || null,
-    isActive: s.isActive,
-  }));
-
-  const serialisedOrderTakers = orderTakers.map((ot) => ({
-    _id: ot._id.toString(),
-    name: ot.name,
-    number: ot.number || "",
-  }));
+  const serialisedProducts = serializeForClient(
+    products.map((p) => ({ ...p, quantity: p.quantity ?? 0 }))
+  );
+  const serialisedStaff = serializeForClient(staff);
+  const serialisedShops = serializeForClient(shops);
+  const serialisedOrderTakers = serializeForClient(orderTakers);
 
   return (
     <div className="space-y-6">

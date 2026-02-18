@@ -1,19 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { connectToDatabase } from "../../lib/db";
+import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { requireUserId } from "../../lib/auth";
+import { withUserId } from "../../lib/tenant";
 import { RouteModel } from "../../models/Route";
 import { Staff } from "../../models/Staff";
 
 export async function createRoute(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const name = formData.get("name")?.trim();
     if (!name) {
       return { error: "Name is required" };
     }
 
-    await RouteModel.create({ name });
+    await RouteModel.create(isMongoDB() ? { userId, name } : { name });
     revalidatePath("/routes");
     return { success: true };
   } catch (error) {
@@ -24,6 +27,7 @@ export async function createRoute(formData) {
 
 export async function updateRoute(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const routeId = formData.get("id")?.trim();
     const name = formData.get("name")?.trim();
@@ -36,13 +40,13 @@ export async function updateRoute(formData) {
       return { error: "Name is required" };
     }
 
-    const route = await RouteModel.findById(routeId).lean();
+    const route = await RouteModel.findOne(withUserId(userId, { _id: routeId })).lean();
     if (!route) {
       return { error: "Route not found" };
     }
 
     const routeIdValue = route._id || route.id;
-    await RouteModel.findByIdAndUpdate(routeIdValue, { name });
+    await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), { name });
 
     revalidatePath("/routes");
     revalidatePath("/staff");
@@ -62,7 +66,7 @@ export async function deleteRoute(formData) {
       return { error: "Missing route id" };
     }
 
-    const route = await RouteModel.findById(routeId).lean();
+    const route = await RouteModel.findOne(withUserId(userId, { _id: routeId })).lean();
     if (!route) {
       return { error: "Route not found" };
     }
@@ -71,7 +75,7 @@ export async function deleteRoute(formData) {
     const previousStaffId = route.assignedStaff?.toString();
     
     // Soft delete: set deletedAt and isActive
-    await RouteModel.findByIdAndUpdate(routeIdValue, {
+    await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), {
       deletedAt: Date.now(),
       isActive: false,
       assignedStaff: null,
@@ -79,7 +83,7 @@ export async function deleteRoute(formData) {
 
     // Unassign staff from this route
     if (previousStaffId) {
-      await Staff.findByIdAndUpdate(previousStaffId, { $unset: { routeId: "" } });
+      await Staff.findOneAndUpdate(withUserId(userId, { _id: previousStaffId }), { $unset: { routeId: "" } });
     }
 
     revalidatePath("/routes");
@@ -93,6 +97,7 @@ export async function deleteRoute(formData) {
 
 export async function assignStaffToRoute(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const routeId = formData.get("routeId")?.trim();
     const staffId = formData.get("staffId")?.trim();
@@ -101,7 +106,7 @@ export async function assignStaffToRoute(formData) {
       return { error: "Missing routeId" };
     }
 
-    const route = await RouteModel.findById(routeId).lean();
+    const route = await RouteModel.findOne(withUserId(userId, { _id: routeId })).lean();
     if (!route) {
       return { error: "Route not found" };
     }
@@ -112,12 +117,12 @@ export async function assignStaffToRoute(formData) {
     if (!staffId) {
       // Unassign: clear the route's assignedStaff and remove routeId from the previously assigned staff
       const previousStaffId = route.assignedStaff?.toString();
-      await RouteModel.findByIdAndUpdate(routeIdValue, {
+      await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), {
         assignedStaff: null,
       });
 
       if (previousStaffId) {
-        await Staff.findByIdAndUpdate(previousStaffId, { $unset: { routeId: "" } });
+        await Staff.findOneAndUpdate(withUserId(userId, { _id: previousStaffId }), { $unset: { routeId: "" } });
       }
 
       revalidatePath("/routes");
@@ -126,17 +131,15 @@ export async function assignStaffToRoute(formData) {
     }
 
     // Assign new staff
-    const staff = await Staff.findById(staffId);
+    const staff = await Staff.findOne(withUserId(userId, { _id: staffId }));
     if (!staff) {
       return { error: "Staff not found" };
     }
 
     // Check if this staff is already assigned to a different route
-    const existingRoute = await RouteModel.findOne({
-      assignedStaff: staffId,
-      _id: { $ne: routeId },
-      deletedAt: null,
-    });
+    const existingRoute = await RouteModel.findOne(
+      withUserId(userId, { assignedStaff: staffId, _id: { $ne: routeId }, deletedAt: null })
+    );
 
     if (existingRoute) {
       return {
@@ -147,14 +150,14 @@ export async function assignStaffToRoute(formData) {
     // Unassign previous staff if any on this route
     const previousStaffId = route.assignedStaff?.toString();
     if (previousStaffId && previousStaffId !== staffId) {
-      await Staff.findByIdAndUpdate(previousStaffId, { $unset: { routeId: "" } });
+      await Staff.findOneAndUpdate(withUserId(userId, { _id: previousStaffId }), { $unset: { routeId: "" } });
     }
 
-    await RouteModel.findByIdAndUpdate(routeIdValue, {
+    await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), {
       assignedStaff: staffId,
     });
 
-    await Staff.findByIdAndUpdate(staffId, { routeId });
+    await Staff.findOneAndUpdate(withUserId(userId, { _id: staffId }), { routeId });
 
     revalidatePath("/routes");
     revalidatePath("/staff");

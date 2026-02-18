@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "../../../../lib/db";
+import { requireUserId } from "../../../../lib/auth";
+import { withUserId } from "../../../../lib/tenant";
 import { Sale } from "../../../../models/Sale";
 import {
   getStartOfDayPK,
@@ -12,6 +14,12 @@ import { INVOICE_PREFIX } from "../../../../lib/config";
 import * as XLSX from "xlsx";
 
 export async function GET(req) {
+  let userId;
+  try {
+    userId = await requireUserId();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   await connectToDatabase();
 
   const { searchParams } = new URL(req.url);
@@ -33,10 +41,12 @@ export async function GET(req) {
     ? getEndOfMonthFor(monthStr)
     : getEndOfDayPK(dateStr);
 
-  const sales = await Sale.find({
-    deletedAt: null,
-    date: { $gte: rangeStart, $lte: rangeEnd },
-  })
+  const sales = await Sale.find(
+    withUserId(userId, {
+      deletedAt: null,
+      date: { $gte: rangeStart, $lte: rangeEnd },
+    })
+  )
     .populate("shopId", "name")
     .populate("staffId", "name")
     .sort({ date: -1 })

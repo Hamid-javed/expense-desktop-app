@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "../../../../../lib/db";
+import { requireUserId } from "../../../../../lib/auth";
+import { withUserId } from "../../../../../lib/tenant";
 import { Sale } from "../../../../../models/Sale";
 import { Shop } from "../../../../../models/Shop";
 import { Staff } from "../../../../../models/Staff";
@@ -10,6 +12,12 @@ import { PDFDocument } from "pdf-lib";
 import { getTodayPK, getStartOfDayPK, getEndOfDayPK } from "../../../../../lib/dateUtils";
 
 export async function GET(req, { params }) {
+  let userId;
+  try {
+    userId = await requireUserId();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   await connectToDatabase();
   const { shopId } = await params;
   const { searchParams } = new URL(req.url);
@@ -18,15 +26,12 @@ export async function GET(req, { params }) {
   const fallbackOtName = searchParams.get("ot") || null;
   const fallbackOtDate = searchParams.get("otDate") || null;
 
-  const shop = await Shop.findById(shopId);
+  const shop = await Shop.findOne(withUserId(userId, { _id: shopId }));
   if (!shop) {
     return NextResponse.json({ error: "Shop not found" }, { status: 404 });
   }
 
-  const query = {
-    shopId,
-    deletedAt: null,
-  };
+  const query = withUserId(userId, { shopId, deletedAt: null });
 
   if (daysParam) {
     const days = parseInt(daysParam, 10) || 30;
@@ -77,17 +82,19 @@ export async function GET(req, { params }) {
 
     for (const sale of sales) {
       const staff = sale.staffId
-        ? await Staff.findById(sale.staffId._id || sale.staffId).lean()
+        ? await Staff.findOne(withUserId(userId, { _id: sale.staffId._id || sale.staffId })).lean()
         : null;
       const route = staff?.routeId
-        ? await RouteModel.findById(staff.routeId).lean()
+        ? await RouteModel.findOne(withUserId(userId, { _id: staff.routeId })).lean()
         : null;
 
       let otName = fallbackOtName;
       let otDate = fallbackOtDate;
       let otNumber = null;
       if (sale.orderTakerId) {
-        const orderTaker = await OrderTaker.findById(sale.orderTakerId._id || sale.orderTakerId).lean();
+        const orderTaker = await OrderTaker.findOne(
+          withUserId(userId, { _id: sale.orderTakerId._id || sale.orderTakerId })
+        ).lean();
         if (orderTaker) {
           otName = orderTaker.name || fallbackOtName;
           otNumber = orderTaker.number || null;

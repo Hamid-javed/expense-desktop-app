@@ -194,6 +194,24 @@ function initializeSchema(db) {
     // Ignore migration errors (e.g. column already exists from manual migration)
   }
 
+  // Migrate all tables: add userId for multi-tenant data isolation
+  const tablesWithUserId = [
+    "products", "routes", "staff", "order_takers", "shops",
+    "sales", "daily_sales_summaries", "credit_payments", "returns",
+  ];
+  for (const table of tablesWithUserId) {
+    try {
+      const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+      const hasUserId = cols.some((c) => c.name === "userId");
+      if (!hasUserId) {
+        db.exec(`ALTER TABLE ${table} ADD COLUMN userId TEXT`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_${table}_userId ON ${table}(userId)`);
+      }
+    } catch (e) {
+      // Ignore (e.g. table doesn't exist)
+    }
+  }
+
   // Daily Sales Summary table
   db.exec(`
     CREATE TABLE IF NOT EXISTS daily_sales_summaries (

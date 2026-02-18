@@ -1,4 +1,6 @@
 import { connectToDatabase } from "../lib/db";
+import { requireUserId } from "../lib/auth";
+import { withUserId, withUserIdForAggregate } from "../lib/tenant";
 import { Sale } from "../models/Sale";
 import "../models/Shop";
 import "../models/Staff";
@@ -22,10 +24,13 @@ import { INVOICE_PREFIX } from "../lib/config";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage({ searchParams }) {
-  const [, search] = await Promise.all([
-    connectToDatabase(),
+  const [search, userId] = await Promise.all([
     searchParams,
+    requireUserId(),
   ]);
+  await connectToDatabase();
+
+  const saleMatch = withUserIdForAggregate(userId, { deletedAt: null });
   const todayStr = getTodayPK();
   const period =
     search?.period === "monthly"
@@ -59,45 +64,45 @@ export default async function DashboardPage({ searchParams }) {
     filteredSales,
   ] = await Promise.all([
     Sale.aggregate([
-      { $match: { deletedAt: null } },
+      { $match: saleMatch },
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]),
     Sale.aggregate([
       {
-        $match: {
+        $match: withUserIdForAggregate(userId, {
           date: { $gte: startOfToday },
           deletedAt: null,
-        },
+        }),
       },
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]),
     Sale.aggregate([
       {
-        $match: {
+        $match: withUserIdForAggregate(userId, {
           date: { $gte: startOfMonth },
           deletedAt: null,
-        },
+        }),
       },
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]),
     Sale.aggregate([
-      { $match: { deletedAt: null } },
+      { $match: saleMatch },
       { $group: { _id: null, total: { $sum: "$cashCollected" } } },
     ]),
     Sale.aggregate([
-      { $match: { deletedAt: null } },
+      { $match: saleMatch },
       { $group: { _id: null, total: { $sum: "$creditRemaining" } } },
     ]),
     Sale.find(
       period === "all"
-        ? { deletedAt: null }
-        : {
+        ? saleMatch
+        : withUserIdForAggregate(userId, {
           deletedAt: null,
           date:
             period === "daily"
               ? { $gte: startOfDay, $lte: endOfDay }
               : { $gte: monthStart, $lte: monthEnd },
-        }
+        })
     )
       .populate("shopId", "name")
       .populate("staffId", "name")

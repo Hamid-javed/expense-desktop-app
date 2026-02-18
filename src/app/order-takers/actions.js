@@ -1,11 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { connectToDatabase } from "../../lib/db";
+import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { requireUserId } from "../../lib/auth";
+import { withUserId } from "../../lib/tenant";
 import { OrderTaker } from "../../models/OrderTaker";
 
 export async function createOrderTaker(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const name = formData.get("name")?.trim();
     const number = formData.get("number")?.trim();
@@ -18,7 +21,8 @@ export async function createOrderTaker(formData) {
       return { error: "Number is required" };
     }
 
-    await OrderTaker.create({ name, number, cnic: cnic || undefined });
+    const otData = { name, number, cnic: cnic || undefined };
+    await OrderTaker.create(isMongoDB() ? { userId, ...otData } : otData);
     revalidatePath("/order-takers");
     revalidatePath("/sales");
     return { success: true };
@@ -30,6 +34,7 @@ export async function createOrderTaker(formData) {
 
 export async function updateOrderTaker(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const id = formData.get("id")?.trim();
     const name = formData.get("name")?.trim();
@@ -46,13 +51,13 @@ export async function updateOrderTaker(formData) {
       return { error: "Number is required" };
     }
 
-    const orderTaker = await OrderTaker.findById(id).lean();
+    const orderTaker = await OrderTaker.findOne(withUserId(userId, { _id: id })).lean();
     if (!orderTaker) {
       return { error: "Order taker not found" };
     }
 
     const idValue = orderTaker._id || orderTaker.id;
-    await OrderTaker.findByIdAndUpdate(idValue, {
+    await OrderTaker.findOneAndUpdate(withUserId(userId, { _id: idValue }), {
       name,
       number,
       cnic: cnic || undefined,
@@ -76,13 +81,13 @@ export async function deleteOrderTaker(formData) {
       return { error: "Missing order taker id" };
     }
 
-    const orderTaker = await OrderTaker.findById(id).lean();
+    const orderTaker = await OrderTaker.findOne(withUserId(userId, { _id: id })).lean();
     if (!orderTaker) {
       return { error: "Order taker not found" };
     }
 
     const idValue = orderTaker._id || orderTaker.id;
-    await OrderTaker.findByIdAndUpdate(idValue, {
+    await OrderTaker.findOneAndUpdate(withUserId(userId, { _id: idValue }), {
       deletedAt: Date.now(),
       isActive: false,
     });

@@ -11,16 +11,6 @@ const START_URL = `http://127.0.0.1:${PORT}`;
 let mainWindow;
 let nextProcess;
 
-// #region agent log
-function dbg(id, message, data = {}) {
-  const payload = { hypothesisId: id, location: 'main.js', message, data, timestamp: Date.now() };
-  let logPath;
-  try { logPath = app.getPath ? path.join(app.getPath('userData'), 'debug.log') : path.join(process.cwd(), '.cursor', 'debug.log'); } catch (_) { logPath = path.join(process.cwd(), '.cursor', 'debug.log'); }
-  try { require('fs').appendFileSync(logPath, JSON.stringify(payload) + '\n'); } catch (_) { }
-  fetch('http://127.0.0.1:7245/ingest/152b2dd4-a42b-4f01-a7e7-73227a6914fe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => { });
-}
-// #endregion
-
 function loadEnv() {
   const envPath = isDev ? path.join(__dirname, '.env') : path.join(path.dirname(app.getPath('exe')), '.env');
   if (!fs.existsSync(envPath)) return {};
@@ -65,9 +55,6 @@ function waitForServer(url, timeoutMs = 60000) {
 }
 
 function createWindow() {
-  // #region agent log
-  dbg('H4', 'createWindow called');
-  // #endregion
   const preloadPath = path.join(__dirname, 'preload.js');
   // Try icon.ico first, fallback to logo.png if not found
   let iconPath;
@@ -106,9 +93,6 @@ function createWindow() {
   }
 
   mainWindow.on('closed', () => {
-    // #region agent log
-    dbg('H4', 'mainWindow closed');
-    // #endregion
     mainWindow = null;
   });
 }
@@ -128,15 +112,9 @@ function startNextServerDev() {
 }
 
 function startNextServerPackaged() {
-  // #region agent log
   const standaloneDir = path.join(process.resourcesPath, 'standalone');
   const serverPath = path.join(standaloneDir, 'server.js');
-  dbg('H5', 'packaged server paths', { resourcesPath: process.resourcesPath, standaloneDir, serverPath, serverExists: fs.existsSync(serverPath) });
-  // #endregion
   if (!fs.existsSync(serverPath)) {
-    // #region agent log
-    dbg('H1', 'standalone server not found, quitting', { serverPath });
-    // #endregion
     console.error('Standalone server not found at', serverPath);
     app.quit();
     return;
@@ -154,20 +132,11 @@ function startNextServerPackaged() {
     },
     stdio: 'inherit',
   });
-  // #region agent log
-  dbg('H1', 'spawn called', { pid: nextProcess.pid });
-  // #endregion
   nextProcess.on('error', (err) => {
-    // #region agent log
-    dbg('H1', 'child process error, quitting', { err: String(err.message || err) });
-    // #endregion
     console.error('Failed to start Next server:', err);
     app.quit();
   });
   nextProcess.on('exit', (code, signal) => {
-    // #region agent log
-    dbg('H2', 'child process exited', { code, signal });
-    // #endregion
     if (code != null && code !== 0 && code !== 143) {
       console.error('Next server exited with code', code, 'signal', signal);
     }
@@ -175,11 +144,6 @@ function startNextServerPackaged() {
 }
 
 function run() {
-  // #region agent log
-  let debugLogPath = '';
-  try { debugLogPath = path.join(app.getPath('userData'), 'debug.log'); } catch (_) { }
-  dbg('H3', 'run() entry', { isDev, isPackaged: app.isPackaged, debugLogPath });
-  // #endregion
   if (isDev) {
     startNextServerDev();
     setTimeout(() => {
@@ -192,15 +156,9 @@ function run() {
     startNextServerPackaged();
     waitForServer(START_URL)
       .then(() => {
-        // #region agent log
-        dbg('H3', 'waitForServer resolved');
-        // #endregion
         createWindow();
       })
       .catch((err) => {
-        // #region agent log
-        dbg('H3', 'waitForServer rejected, quitting', { err: String(err.message || err) });
-        // #endregion
         console.error(err);
         app.quit();
       });
@@ -210,9 +168,6 @@ function run() {
 app.whenReady().then(run);
 
 app.on('window-all-closed', () => {
-  // #region agent log
-  dbg('H4', 'window-all-closed');
-  // #endregion
   if (nextProcess) {
     nextProcess.kill();
     nextProcess = null;
@@ -223,9 +178,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('quit', () => {
-  // #region agent log
-  dbg('H4', 'app quit');
-  // #endregion
   if (nextProcess) {
     nextProcess.kill();
     nextProcess = null;

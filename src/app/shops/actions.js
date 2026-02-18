@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { connectToDatabase } from "../../lib/db";
+import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { requireUserId } from "../../lib/auth";
+import { withUserId } from "../../lib/tenant";
 import { Shop } from "../../models/Shop";
 import { z } from "zod";
 
@@ -27,6 +29,7 @@ const shopUpdateSchema = z.object({
 
 export async function createShop(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const name = getFormValue(formData, "name")?.toString().trim();
     const ownerName = getFormValue(formData, "ownerName")?.toString().trim();
@@ -38,13 +41,14 @@ export async function createShop(formData) {
       return { error: "Name is required" };
     }
 
-    await Shop.create({
+    const shopData = {
       name,
       ownerName: ownerName || undefined,
       phone: phone || undefined,
       cnic: cnic || undefined,
       routeId: routeId || undefined,
-    });
+    };
+    await Shop.create(isMongoDB() ? { userId, ...shopData } : shopData);
 
     revalidatePath("/shops");
     return { success: true };
@@ -56,6 +60,7 @@ export async function createShop(formData) {
 
 export async function updateShop(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
 
     const rawData = {
@@ -70,7 +75,7 @@ export async function updateShop(formData) {
 
     const validated = shopUpdateSchema.parse(rawData);
 
-    const shop = await Shop.findById(validated.id);
+    const shop = await Shop.findOne(withUserId(userId, { _id: validated.id }));
     if (!shop || shop.deletedAt) {
       return { error: "Shop not found" };
     }
@@ -96,7 +101,7 @@ export async function updateShop(formData) {
       updateData.routeId = validated.routeId || undefined;
     }
 
-    await Shop.findByIdAndUpdate(validated.id, updateData);
+    await Shop.findOneAndUpdate(withUserId(userId, { _id: validated.id }), updateData);
 
     revalidatePath("/shops");
     return { success: true };
@@ -113,19 +118,20 @@ export async function updateShop(formData) {
 
 export async function toggleShopActive(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const id = formData.get("id")?.trim();
     if (!id) {
       return { error: "Missing id" };
     }
 
-    const shop = await Shop.findById(id).lean();
+    const shop = await Shop.findOne(withUserId(userId, { _id: id })).lean();
     if (!shop) {
       return { error: "Shop not found" };
     }
 
     const shopId = shop._id || shop.id;
-    await Shop.findByIdAndUpdate(shopId, {
+    await Shop.findOneAndUpdate(withUserId(userId, { _id: shopId }), {
       isActive: !shop.isActive,
     });
 

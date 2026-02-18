@@ -4,6 +4,7 @@ import { DailySalesSummary as SQLiteDailySalesSummary } from "./sqlite/DailySale
 
 const DailySalesSummarySchemaDef = new mongoose.Schema(
   {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     staffId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Staff",

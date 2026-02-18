@@ -64,4 +64,19 @@ export async function getSession() {
   return verifyToken(token);
 }
 
+/** Returns current user ID or null if not logged in */
+export async function getCurrentUserId() {
+  const session = await getSession();
+  return session?.userId ?? null;
+}
+
+/** Returns current user ID or throws if not logged in */
+export async function requireUserId() {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
+  return userId;
+}
+
 export { TOKEN_COOKIE_NAME };

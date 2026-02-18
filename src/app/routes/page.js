@@ -1,4 +1,7 @@
 import { connectToDatabase } from "../../lib/db";
+import { requireUserId } from "../../lib/auth";
+import { withUserId } from "../../lib/tenant";
+import { serializeForClient } from "../../lib/serialize";
 import { RouteModel } from "../../models/Route";
 import { Staff } from "../../models/Staff";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -12,28 +15,16 @@ import { RouteRow } from "./RouteRow";
 export const dynamic = "force-dynamic";
 
 export default async function RoutesPage() {
+  const userId = await requireUserId();
   await connectToDatabase();
   const [routesRaw, staffRaw, allStaffRaw] = await Promise.all([
-    RouteModel.find({ deletedAt: null }).sort({ name: 1 }).lean(),
-    Staff.find({ deletedAt: null, isActive: true }).sort({ name: 1 }).lean(), // Only active staff for dropdown
-    Staff.find({ deletedAt: null }).sort({ name: 1 }).lean(), // All staff for finding assigned (even if inactive)
+    RouteModel.find(withUserId(userId, { deletedAt: null })).sort({ name: 1 }).lean(),
+    Staff.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
+    Staff.find(withUserId(userId, { deletedAt: null })).sort({ name: 1 }).lean(),
   ]);
-  // Serialize ObjectIds to strings for form handling
-  const routes = routesRaw.map((r) => ({
-    ...r,
-    _id: r._id.toString(),
-    assignedStaff: r.assignedStaff?.toString(),
-  }));
-  const staff = staffRaw.map((s) => ({
-    ...s,
-    _id: s._id.toString(),
-    routeId: s.routeId?.toString(),
-  }));
-  const allStaff = allStaffRaw.map((s) => ({
-    ...s,
-    _id: s._id.toString(),
-    routeId: s.routeId?.toString(),
-  }));
+  const routes = serializeForClient(routesRaw);
+  const staff = serializeForClient(staffRaw);
+  const allStaff = serializeForClient(allStaffRaw);
 
   return (
     <div className="space-y-4">

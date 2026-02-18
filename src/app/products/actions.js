@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { connectToDatabase } from "../../lib/db";
+import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { requireUserId } from "../../lib/auth";
+import { withUserId } from "../../lib/tenant";
 import { Product } from "../../models/Product";
 import { UNITS } from "../../lib/config";
 
@@ -16,6 +18,7 @@ const productSchema = z.object({
 
 export async function createProduct(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
 
     const quantityInput = formData.get("quantity");
@@ -38,13 +41,14 @@ export async function createProduct(formData) {
 
     const data = parsed.data;
 
-    await Product.create({
+    const productData = {
       name: data.name,
       sku: data.sku,
       unit: data.unit,
       price: data.price,
-      quantity: data.quantity ?? 0, // Explicitly set quantity, default to 0
-    });
+      quantity: data.quantity ?? 0,
+    };
+    await Product.create(isMongoDB() ? { userId, ...productData } : productData);
 
     revalidatePath("/products");
     return { success: true };
@@ -56,6 +60,7 @@ export async function createProduct(formData) {
 
 export async function updateProduct(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
 
     const id = formData.get("id")?.trim();
@@ -112,8 +117,8 @@ export async function updateProduct(formData) {
       finalUpdate.quantity = quantityValue;
     }
 
-    await Product.findByIdAndUpdate(
-      id,
+    await Product.findOneAndUpdate(
+      withUserId(userId, { _id: id }),
       finalUpdate,
       { new: true }
     );
@@ -128,19 +133,20 @@ export async function updateProduct(formData) {
 
 export async function toggleProductActive(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const id = formData.get("id")?.trim();
     if (!id) {
       return { error: "Missing product id" };
     }
 
-    const product = await Product.findById(id).lean();
+    const product = await Product.findOne(withUserId(userId, { _id: id })).lean();
     if (!product) {
       return { error: "Product not found" };
     }
 
     const productIdValue = product._id || product.id;
-    await Product.findByIdAndUpdate(productIdValue, {
+    await Product.findOneAndUpdate(withUserId(userId, { _id: productIdValue }), {
       isActive: !product.isActive,
     });
 

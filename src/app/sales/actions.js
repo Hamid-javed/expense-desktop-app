@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { connectToDatabase } from "../../lib/db";
+import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { requireUserId } from "../../lib/auth";
+import { withUserId } from "../../lib/tenant";
 import { Sale } from "../../models/Sale";
 import { InvoiceCounter } from "../../models/InvoiceCounter";
 import { Shop } from "../../models/Shop";
@@ -27,7 +29,15 @@ const saleSchema = z.object({
     .min(1),
 });
 
-async function getNextInvoiceNumber() {
+async function getNextInvoiceNumber(userId) {
+  if (isMongoDB()) {
+    const counter = await InvoiceCounter.findOneAndUpdate(
+      { userId, key: "invoice" },
+      { $inc: { lastNumber: 1 } },
+      { new: true, upsert: true }
+    );
+    return counter.lastNumber;
+  }
   const counter = await InvoiceCounter.findOneAndUpdate(
     { key: "invoice" },
     { $inc: { lastNumber: 1 } },
@@ -38,6 +48,7 @@ async function getNextInvoiceNumber() {
 
 export async function createSale(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
 
     const rawItems = [];
@@ -70,7 +81,7 @@ export async function createSale(formData) {
 
     // Validate: no zero quantity, and requested quantity must not exceed available
     const productIds = [...new Set(data.items.map((it) => it.productId))];
-    const products = await Product.find({ _id: { $in: productIds } }).lean();
+    const products = await Product.find(withUserId(userId, { _id: { $in: productIds } })).lean();
     const productMap = new Map(products.map((p) => [p._id.toString(), p]));
 
     for (const item of data.items) {
@@ -97,12 +108,14 @@ export async function createSale(formData) {
     const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 
     // Check if a sale exists for the same shop, staff, and date
-    const existingSale = await Sale.findOne({
-      shopId: data.shopId,
-      staffId: data.staffId,
-      date: { $gte: startOfDay, $lte: endOfDay },
-      deletedAt: null,
-    }).lean();
+    const existingSale = await Sale.findOne(
+      withUserId(userId, {
+        shopId: data.shopId,
+        staffId: data.staffId,
+        date: { $gte: startOfDay, $lte: endOfDay },
+        deletedAt: null,
+      })
+    ).lean();
 
     const itemsWithTotals = data.items.map((it) => ({
       productId: it.productId,
@@ -195,8 +208,9 @@ export async function createSale(formData) {
       const saleId = existingSale._id || existingSale.id;
       
       // Update the sale using SQLite-compatible method (include order taker from form)
-      sale = await Sale.findByIdAndUpdate(
-        saleId,
+      const saleFilter = isMongoDB() ? { _id: saleId, userId } : { _id: saleId };
+      sale = await Sale.findOneAndUpdate(
+        saleFilter,
         {
           items: mergedItems,
           totalAmount: mergedTotalAmount,
@@ -208,12 +222,12 @@ export async function createSale(formData) {
       );
     } else {
       // Create new sale
-      invoiceId = await getNextInvoiceNumber();
+      invoiceId = await getNextInvoiceNumber(userId);
 
       // Always set to 0 by default - user can update via Cash & Credit form
       const cashCollected = 0;
       const creditRemaining = 0;
-      sale = await Sale.create({
+      const saleData = {
         invoiceId,
         date,
         staffId: data.staffId,
@@ -225,7 +239,8 @@ export async function createSale(formData) {
         paymentType: data.paymentType,
         cashCollected,
         creditRemaining,
-      });
+      };
+      sale = await Sale.create(isMongoDB() ? { userId, ...saleData } : saleData);
 
       // Track all product updates for new sale
       productUpdates = itemsWithTotals.map((it) => ({
@@ -273,6 +288,7 @@ export async function createSale(formData) {
 
 export async function updateSaleCashCredit(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const saleId = formData.get("saleId")?.trim();
     const shopId = formData.get("shopId")?.trim();
@@ -289,7 +305,9 @@ export async function updateSaleCashCredit(formData) {
       return { error: "Credit remaining must be a non-negative number." };
     }
 
-    const sale = await Sale.findById(saleId).lean();
+    const sale = await Sale.findOne(
+      withUserId(userId, { _id: saleId })
+    ).lean();
     if (!sale || sale.deletedAt) {
       return { error: "Sale not found" };
     }
@@ -302,7 +320,8 @@ export async function updateSaleCashCredit(formData) {
     }
 
     const saleIdValue = sale._id || sale.id;
-    await Sale.findByIdAndUpdate(saleIdValue, {
+    const saleFilter = isMongoDB() ? { _id: saleIdValue, userId } : { _id: saleIdValue };
+    await Sale.findOneAndUpdate(saleFilter, {
       cashCollected,
       creditRemaining,
     });
@@ -320,6 +339,7 @@ export async function updateSaleCashCredit(formData) {
 
 export async function toggleSaleStatus(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const saleId = formData.get("saleId")?.trim();
     const shopId = formData.get("shopId")?.trim();
@@ -327,7 +347,9 @@ export async function toggleSaleStatus(formData) {
       return { error: "Missing sale id" };
     }
 
-    const sale = await Sale.findById(saleId).lean();
+    const sale = await Sale.findOne(
+      withUserId(userId, { _id: saleId })
+    ).lean();
     if (!sale || sale.deletedAt) {
       return { error: "Sale not found" };
     }
@@ -353,7 +375,8 @@ export async function toggleSaleStatus(formData) {
       updateData.creditRemaining = 0;
     }
     
-    await Sale.findByIdAndUpdate(saleIdValue, updateData);
+    const saleFilter = isMongoDB() ? { _id: saleIdValue, userId } : { _id: saleIdValue };
+    await Sale.findOneAndUpdate(saleFilter, updateData);
 
     if (shopId) {
       revalidatePath(`/shops/${shopId}`);
