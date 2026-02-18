@@ -180,12 +180,13 @@ export async function updateSaleItemQuantity(formData) {
     // Update product
     await Product.findOneAndUpdate(
       withUserId(userId, { _id: item.productId }),
-      $inc: {
-        quantity: quantityChange,
-        totalSold: quantityDiff,
-        totalRevenue: revenueChange,
-      },
-    }
+      {
+        $inc: {
+          quantity: quantityChange,
+          totalSold: quantityDiff,
+          totalRevenue: revenueChange,
+        },
+      }
     );
 
     // Note: currentCredit is now managed manually from the shop page only

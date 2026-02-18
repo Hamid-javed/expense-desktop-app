@@ -6,6 +6,7 @@ import { Sale } from "../../../models/Sale";
 import { Product } from "../../../models/Product";
 import { Staff } from "../../../models/Staff";
 import { RouteModel } from "../../../models/Route";
+import "../../../models/OrderTaker";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Card, CardBody, CardHeader } from "../../../components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "../../../components/ui/Table";
@@ -14,6 +15,9 @@ import { Button } from "../../../components/ui/Button";
 import { ShopDayReportPrompt } from "./ShopDayReportPrompt";
 import { SaleStatusToggle } from "./SaleStatusToggle";
 import { SaleCashCreditForm } from "./SaleCashCreditForm";
+import { ReturnProductForm } from "./ReturnProductForm";
+import { ReturnModel } from "../../../models/Return";
+import { serializeForClient } from "../../../lib/serialize";
 import { INVOICE_PREFIX } from "../../../lib/config";
 import {
   getTodayPK,
@@ -100,6 +104,12 @@ export default async function ShopDetailPage({ params, searchParams }) {
     }
 
     const staff = sale.staffId;
+    const saleIdForQuery = sale._id ?? sale.id;
+    const returnsList = await ReturnModel.find(withUserId(userId, { saleId: saleIdForQuery }))
+      .populate("productId", "name sku")
+      .lean()
+      .then((r) => (Array.isArray(r) ? r : []));
+
     return (
       <div className="space-y-6">
         <PageHeader
@@ -160,6 +170,44 @@ export default async function ShopDetailPage({ params, searchParams }) {
                 cashCollected={sale.cashCollected ?? 0}
                 creditRemaining={sale.creditRemaining ?? 0}
               />
+              <ReturnProductForm sale={serializeForClient(sale)} shopId={id} />
+              {returnsList.length > 0 && (
+                <div className="mt-4 rounded border border-slate-200 bg-slate-50 p-3">
+                  <h4 className="mb-2 text-sm font-medium text-slate-700">Returns</h4>
+                  <Table>
+                    <THead>
+                      <TR>
+                        <TH>Product</TH>
+                        <TH className="text-right">Quantity</TH>
+                        <TH>Reason</TH>
+                        <TH>Date</TH>
+                      </TR>
+                    </THead>
+                    <TBody>
+                      {returnsList.map((ret, i) => {
+                        const product = ret.productId;
+                        const productName = product?.name ?? "Unknown";
+                        const createdAt = ret.createdAt ?? ret.created_at;
+                        return (
+                          <TR key={i}>
+                            <TD>{productName}</TD>
+                            <TD className="text-right">{ret.quantity}</TD>
+                            <TD className="text-slate-600 text-xs">{ret.reason || "-"}</TD>
+                            <TD className="text-slate-600 text-xs">
+                              {createdAt
+                                ? new Date(createdAt).toLocaleString(undefined, {
+                                    dateStyle: "short",
+                                    timeStyle: "short",
+                                  })
+                                : "-"}
+                            </TD>
+                          </TR>
+                        );
+                      })}
+                    </TBody>
+                  </Table>
+                </div>
+              )}
               <Table>
                 <THead>
                   <TR>
