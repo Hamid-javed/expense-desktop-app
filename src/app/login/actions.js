@@ -3,7 +3,6 @@
 import { connectToDatabase } from "../../lib/db";
 import { User } from "../../models/User";
 import { verifyPassword, createToken, setAuthCookie } from "../../lib/auth";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -47,9 +46,8 @@ export async function login(formData) {
     });
     await setAuthCookie(token);
 
-    redirect("/");
+    return { success: true };
   } catch (err) {
-    if (err?.digest?.startsWith?.("NEXT_REDIRECT")) throw err;
     console.error("Login error:", err);
     return { error: err?.message || "Login failed." };
   }

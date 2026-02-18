@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { login } from "./actions";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 
 export function LoginForm() {
+  const router = useRouter();
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -16,7 +18,11 @@ export function LoginForm() {
       const result = await login(formData);
       if (result?.error) {
         setError(result.error);
+      } else if (result?.success) {
+        router.push("/");
       }
+    } catch (err) {
+      setError(err?.message || "An error occurred");
     } finally {
       setLoading(false);
     }
