@@ -12,8 +12,8 @@ export const INVOICE_PREFIX = "INV-";
 // Company details for invoice header
 export const COMPANY = {
   name: "Al-Razaq Traders",
-  address: "RAHIM YAR KHAN",
-  phone: "03199999999",
-  ntnStrn: "N.T.N# / STRN# 99999999999",
+  address: "Main jugnu chock",
+  city: "RAHIM YAR KHAN",
+  phone: "03063137950",
 };
 

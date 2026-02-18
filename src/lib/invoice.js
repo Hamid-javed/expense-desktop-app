@@ -60,10 +60,20 @@ export async function generateInvoicePdf(
   // --- TOP LEFT: Company ---
   draw(COMPANY.name, colLeft, y, heading, true);
   y -= 18;
-  draw(`${COMPANY.address} / ${COMPANY.phone}`, colLeft, y, small);
-  y -= 14;
-  draw(COMPANY.ntnStrn, colLeft, y, small);
-  y -= 24;
+  const addr = [COMPANY.address, COMPANY.city].filter(Boolean).join(", ");
+  if (addr) {
+    draw(addr, colLeft, y, small);
+    y -= 14;
+  }
+  if (COMPANY.phone) {
+    draw(COMPANY.phone, colLeft, y, small);
+    y -= 14;
+  }
+  if (COMPANY.ntnStrn) {
+    draw(COMPANY.ntnStrn, colLeft, y, small);
+    y -= 14;
+  }
+  y -= 10;
 
   // --- TOP LEFT: Outlet / Customer ---
   draw("Outlet:", colLeft, y, small, true);
@@ -280,10 +290,20 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
   // --- Header: Company ---
   draw(COMPANY.name, margin, y, heading, true);
   y -= 18;
-  draw(`${COMPANY.address} / ${COMPANY.phone}`, margin, y, small);
-  y -= 14;
-  draw(COMPANY.ntnStrn, margin, y, small);
-  y -= 20;
+  const addr = [COMPANY.address, COMPANY.city].filter(Boolean).join(", ");
+  if (addr) {
+    draw(addr, margin, y, small);
+    y -= 14;
+  }
+  if (COMPANY.phone) {
+    draw(COMPANY.phone, margin, y, small);
+    y -= 14;
+  }
+  if (COMPANY.ntnStrn) {
+    draw(COMPANY.ntnStrn, margin, y, small);
+    y -= 14;
+  }
+  y -= 10;
 
   // --- Outlet ---
   draw("Outlet:", margin, y, small, true);
@@ -412,10 +432,20 @@ export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr 
   // --- TOP LEFT: Company ---
   draw(COMPANY.name, colLeft, y, heading, true);
   y -= 18;
-  draw(`${COMPANY.address} / ${COMPANY.phone}`, colLeft, y, small);
-  y -= 14;
-  draw(COMPANY.ntnStrn, colLeft, y, small);
-  y -= 24;
+  const addr = [COMPANY.address, COMPANY.city].filter(Boolean).join(", ");
+  if (addr) {
+    draw(addr, colLeft, y, small);
+    y -= 14;
+  }
+  if (COMPANY.phone) {
+    draw(COMPANY.phone, colLeft, y, small);
+    y -= 14;
+  }
+  if (COMPANY.ntnStrn) {
+    draw(COMPANY.ntnStrn, colLeft, y, small);
+    y -= 14;
+  }
+  y -= 10;
 
   // --- TOP RIGHT: Salesman & Date ---
   let yRight = height - margin;

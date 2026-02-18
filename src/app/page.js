@@ -1,5 +1,7 @@
 import { connectToDatabase } from "../lib/db";
 import { Sale } from "../models/Sale";
+import "../models/Shop";
+import "../models/Staff";
 import Link from "next/link";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
