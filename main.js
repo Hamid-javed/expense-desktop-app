@@ -6,6 +6,26 @@ const fs = require('fs');
 
 const isDev = !app.isPackaged;
 const PORT = 3100;
+
+// #region agent log
+function debugLog(message, data = {}) {
+  const payload = {
+    sessionId: '3d36c5',
+    timestamp: Date.now(),
+    location: 'main.js',
+    message,
+    data: { ...data, isPackaged: app.isPackaged },
+    runId: data.runId || 'run1',
+    hypothesisId: data.hypothesisId || 'A',
+  };
+  const line = JSON.stringify(payload) + '\n';
+  try {
+    const logPath = isDev ? path.join(__dirname, 'debug-3d36c5.log') : path.join(app.getPath('userData'), 'debug-3d36c5.log');
+    fs.appendFileSync(logPath, line);
+  } catch (_) {}
+  fetch('http://127.0.0.1:7749/ingest/5c0505c4-58d9-4bfe-ba64-a4068cca1bec', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3d36c5' }, body: JSON.stringify({ ...payload, sessionId: '3d36c5' }) }).catch(() => {});
+}
+// #endregion
 const START_URL = `http://127.0.0.1:${PORT}`;
 
 let mainWindow;
@@ -114,14 +134,31 @@ function startNextServerDev() {
 function startNextServerPackaged() {
   const standaloneDir = path.join(process.resourcesPath, 'standalone');
   const serverPath = path.join(standaloneDir, 'server.js');
-  if (!fs.existsSync(serverPath)) {
+  const bundledNodePath = path.join(process.resourcesPath, 'node-runtime', 'node.exe');
+  const serverExists = fs.existsSync(serverPath);
+  const nodeExists = fs.existsSync(bundledNodePath);
+  // #region agent log
+  debugLog('startNextServerPackaged paths', { hypothesisId: 'A', resourcesPath: process.resourcesPath, standaloneDir, serverPath, serverExists, bundledNodePath, nodeExists });
+  // #endregion
+  if (!serverExists) {
+    debugLog('quit: standalone server not found', { hypothesisId: 'B', serverPath });
     console.error('Standalone server not found at', serverPath);
     app.quit();
     return;
   }
-  nextProcess = spawn('node', [serverPath], {
+  
+  const nodeExecutable = nodeExists ? bundledNodePath : 'node';
+  debugLog('spawning Next server', { hypothesisId: 'A', nodeExecutable });
+  
+  let stdoutChunks = [];
+  let stderrChunks = [];
+  
+  // Use shell: false to properly handle paths with spaces on Windows
+  // When using bundled node, we have a full path, so shell: false works fine
+  // When falling back to system 'node', it will still work if node is in PATH
+  nextProcess = spawn(nodeExecutable, [serverPath], {
     cwd: standaloneDir,
-    shell: true,
+    shell: false,
     env: {
       ...process.env,
       ...loadEnv(),
@@ -130,15 +167,35 @@ function startNextServerPackaged() {
       NODE_ENV: 'production',
       ELECTRON_USER_DATA: app.getPath('userData'),
     },
-    stdio: 'inherit',
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
+  
+  nextProcess.stdout.on('data', (chunk) => {
+    stdoutChunks.push(chunk);
+  });
+  
+  nextProcess.stderr.on('data', (chunk) => {
+    stderrChunks.push(chunk);
+  });
+  
   nextProcess.on('error', (err) => {
+    const stdout = Buffer.concat(stdoutChunks).toString('utf8');
+    const stderr = Buffer.concat(stderrChunks).toString('utf8');
+    debugLog('nextProcess error', { hypothesisId: 'A', errMessage: err.message, errCode: err.code, nodeExecutable, stdout, stderr });
     console.error('Failed to start Next server:', err);
+    console.error('Node executable used:', nodeExecutable);
+    if (stdout) console.error('STDOUT:', stdout);
+    if (stderr) console.error('STDERR:', stderr);
     app.quit();
   });
   nextProcess.on('exit', (code, signal) => {
+    const stdout = Buffer.concat(stdoutChunks).toString('utf8');
+    const stderr = Buffer.concat(stderrChunks).toString('utf8');
+    debugLog('nextProcess exit', { hypothesisId: 'C', code, signal, stdout, stderr });
     if (code != null && code !== 0 && code !== 143) {
       console.error('Next server exited with code', code, 'signal', signal);
+      if (stdout) console.error('STDOUT:', stdout);
+      if (stderr) console.error('STDERR:', stderr);
     }
   });
 }
@@ -153,19 +210,40 @@ function run() {
       });
     }, 1000);
   } else {
+    // #region agent log
+    debugLog('run() packaged branch', { hypothesisId: 'D', resourcesPath: process.resourcesPath });
+    // #endregion
     startNextServerPackaged();
     waitForServer(START_URL)
       .then(() => {
+        debugLog('waitForServer resolved, creating window', { hypothesisId: 'E' });
         createWindow();
       })
       .catch((err) => {
+        debugLog('waitForServer rejected', { hypothesisId: 'C', errMessage: err.message });
         console.error(err);
         app.quit();
       });
   }
 }
 
-app.whenReady().then(run);
+app.whenReady().then(() => {
+  // #region agent log
+  debugLog('app.whenReady fired', { hypothesisId: 'D' });
+  // #endregion
+  try {
+    run();
+  } catch (err) {
+    debugLog('run() threw', { hypothesisId: 'D', errMessage: err.message, errStack: err.stack });
+    app.quit();
+  }
+});
+process.on('uncaughtException', (err) => {
+  try {
+    debugLog('uncaughtException', { hypothesisId: 'D', errMessage: err.message, errStack: err.stack });
+  } catch (_) {}
+  app.quit();
+});
 
 app.on('window-all-closed', () => {
   if (nextProcess) {
