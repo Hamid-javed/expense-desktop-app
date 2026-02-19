@@ -60,7 +60,7 @@ async function run() {
   }
 
   console.log(`Downloading Node.js ${NODE_VERSION} for Windows ${NODE_ARCH}...`);
-  
+
   const url = `https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-win-${NODE_ARCH}.zip`;
   const zipPath = path.join(root, 'build', `node-v${NODE_VERSION}-win-${NODE_ARCH}.zip`);
   const extractDir = path.join(root, 'build');
@@ -86,12 +86,12 @@ async function run() {
     if (!fs.existsSync(nodeDir)) {
       fs.mkdirSync(nodeDir, { recursive: true });
     }
-    
+
     fs.renameSync(
       path.join(extractedNodeDir, 'node.exe'),
       nodeExe
     );
-    
+
     // Copy node_modules if needed (for npm)
     const extractedModules = path.join(extractedNodeDir, 'node_modules');
     if (fs.existsSync(extractedModules)) {
