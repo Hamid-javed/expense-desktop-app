@@ -30,10 +30,14 @@ export function getDbConfig() {
     }
   }
 
-  // Ensure directory exists
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+  // Ensure directory exists (do not throw in Electron/production if fs fails)
+  try {
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+  } catch {
+    // use path as-is; SQLite will throw on connect if dir is bad
   }
 
   return {

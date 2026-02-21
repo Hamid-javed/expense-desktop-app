@@ -1,6 +1,7 @@
 "use server";
 
 import { connectToDatabase } from "../../lib/db";
+import { getFriendlyConnectionMessage } from "../../lib/db/connectionError.js";
 import { User } from "../../models/User";
 import { verifyPassword, createToken, setAuthCookie } from "../../lib/auth";
 import { z } from "zod";
@@ -49,6 +50,6 @@ export async function login(formData) {
     return { success: true };
   } catch (err) {
     console.error("Login error:", err);
-    return { error: err?.message || "Login failed." };
+    return { error: getFriendlyConnectionMessage(err) || "Login failed." };
   }
 }

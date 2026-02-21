@@ -1,4 +1,8 @@
 import mongoose from "mongoose";
+import {
+  isNetworkConnectionError,
+  FRIENDLY_OFFLINE_MESSAGE,
+} from "./connectionError.js";
 
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/expense_app";
@@ -22,8 +26,16 @@ export async function connectMongoDB() {
       .then((mongooseInstance) => mongooseInstance);
   }
 
-  cached.conn = await cached.promise;
-  return cached.conn;
+  try {
+    cached.conn = await cached.promise;
+    return cached.conn;
+  } catch (err) {
+    if (isNetworkConnectionError(err)) {
+      cached.promise = null;
+      throw new Error(FRIENDLY_OFFLINE_MESSAGE);
+    }
+    throw err;
+  }
 }
 
 export function disconnectMongoDB() {

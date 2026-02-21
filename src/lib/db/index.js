@@ -1,12 +1,14 @@
 import { getDbConfig } from "./config.js";
 import { connectMongoDB } from "./mongodb.js";
 import { connectSQLite } from "./sqlite.js";
+import { getFriendlyConnectionMessage } from "./connectionError.js";
 
 let currentDbType = null;
 let dbConfig = null;
 
 /**
- * Connect to database based on configuration
+ * Connect to database based on configuration.
+ * Network errors (e.g. MongoDB SRV timeout when offline) are rethrown with a user-friendly message.
  */
 export async function connectToDatabase() {
   if (!dbConfig) {
@@ -15,11 +17,14 @@ export async function connectToDatabase() {
 
   currentDbType = dbConfig.type;
 
-  if (currentDbType === "mongodb") {
-    return await connectMongoDB();
-  } else {
-    // SQLite (default)
-    return connectSQLite(dbConfig.path);
+  try {
+    if (currentDbType === "mongodb") {
+      return await connectMongoDB();
+    } else {
+      return connectSQLite(dbConfig.path);
+    }
+  } catch (err) {
+    throw new Error(getFriendlyConnectionMessage(err));
   }
 }
 

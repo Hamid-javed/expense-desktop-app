@@ -18,6 +18,10 @@ export async function middleware(request) {
   const token = request.cookies.get(AUTH_COOKIE)?.value;
 
   if (isPublic) {
+    // Let POST /login always reach the Server Action so the client gets 200 + result, not 307
+    if (pathname === "/login" && request.method === "POST") {
+      return NextResponse.next();
+    }
     if (token) {
       try {
         await jwtVerify(token, JWT_SECRET);
