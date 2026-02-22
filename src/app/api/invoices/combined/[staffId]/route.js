@@ -64,10 +64,12 @@ export async function GET(req, { params }) {
         name,
         phone,
         invoiceIds: [],
+        totalDiscount: 0,
         totalAmount: 0,
       });
     }
     const entry = shopMap.get(id);
+    entry.totalDiscount += sale.totalDiscount || 0;
     entry.totalAmount += sale.totalAmount || 0;
     if (sale.invoiceId != null) entry.invoiceIds.push(sale.invoiceId);
   }

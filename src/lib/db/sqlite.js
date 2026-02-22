@@ -161,6 +161,7 @@ function initializeSchema(db) {
       staffId INTEGER,
       shopId INTEGER,
       items TEXT NOT NULL,
+      totalDiscount REAL DEFAULT 0,
       totalAmount REAL NOT NULL DEFAULT 0,
       paymentType TEXT NOT NULL,
       cashCollected REAL DEFAULT 0,
@@ -189,6 +190,9 @@ function initializeSchema(db) {
     }
     if (!colNames.includes("orderTakeDate")) {
       db.exec("ALTER TABLE sales ADD COLUMN orderTakeDate INTEGER");
+    }
+    if (!colNames.includes("totalDiscount")) {
+      db.exec("ALTER TABLE sales ADD COLUMN totalDiscount REAL DEFAULT 0");
     }
   } catch (e) {
     // Ignore migration errors (e.g. column already exists from manual migration)

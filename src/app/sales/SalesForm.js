@@ -7,7 +7,7 @@ import { PAYMENT_TYPES } from "../../lib/config";
 
 export function SalesForm({ staff, shops, products, orderTakers = [], createSale }) {
   const [rows, setRows] = useState([
-    { productId: "", quantity: "", price: "" },
+    { productId: "", quantity: "", price: "", discount: "" },
   ]);
   const [paymentType, setPaymentType] = useState(PAYMENT_TYPES[0]);
   const [formError, setFormError] = useState(null);
@@ -20,7 +20,7 @@ export function SalesForm({ staff, shops, products, orderTakers = [], createSale
   })();
 
   const addRow = () => {
-    setRows((prev) => [...prev, { productId: "", quantity: "", price: "" }]);
+    setRows((prev) => [...prev, { productId: "", quantity: "", price: "", discount: "" }]);
   };
 
   const removeRow = (index) => {
@@ -35,17 +35,31 @@ export function SalesForm({ staff, shops, products, orderTakers = [], createSale
 
   const computedRows = rows.map((row) => {
     const qty = Number(row.quantity || 0);
+    const discount = Number(row.discount || 0);
     const price = Number(
       row.price ||
-        (products.find((p) => p._id === row.productId)?.price ?? 0)
+      (products.find((p) => p._id === row.productId)?.price ?? 0)
     );
-    return { ...row, quantity: row.quantity, price, lineTotal: qty * price };
+    // Line total is quantity * (effective price)
+    const effectivePrice = price - discount;
+    return { ...row, quantity: row.quantity, price, discount, lineTotal: qty * effectivePrice };
   });
 
-  const grandTotal = computedRows.reduce(
-    (sum, r) => sum + (Number(r.lineTotal) || 0),
+  const subtotal = computedRows.reduce(
+    (sum, r) => {
+      const qty = Number(r.quantity || 0);
+      const price = Number(r.price || 0);
+      return sum + (qty * price);
+    },
     0
   );
+
+  const totalDiscount = computedRows.reduce(
+    (sum, r) => sum + (Number(r.quantity || 0) * (Number(r.discount) || 0)),
+    0
+  );
+
+  const grandTotal = subtotal - totalDiscount;
 
   const getAvailable = (productId) => {
     const p = products.find((x) => x._id === productId);
@@ -81,6 +95,7 @@ export function SalesForm({ staff, shops, products, orderTakers = [], createSale
           formData.set(`items[${index}][productId]`, row.productId);
           formData.set(`items[${index}][quantity]`, String(row.quantity || 0));
           formData.set(`items[${index}][price]`, String(row.price || 0));
+          formData.set(`items[${index}][discount]`, String(row.discount || 0));
         });
 
         const result = await createSale(formData);
@@ -88,7 +103,7 @@ export function SalesForm({ staff, shops, products, orderTakers = [], createSale
           setFormError(result.error);
           return;
         }
-        setRows([{ productId: "", quantity: "", price: "" }]);
+        setRows([{ productId: "", quantity: "", price: "", discount: "" }]);
       }}
       className="space-y-4"
     >
@@ -185,6 +200,7 @@ export function SalesForm({ staff, shops, products, orderTakers = [], createSale
             <TH>Product</TH>
             <TH className="text-right">Qty</TH>
             <TH className="text-right">Price</TH>
+            <TH className="text-right">Discount</TH>
             <TH className="text-right">Line total</TH>
             <TH />
           </TR>
@@ -218,11 +234,10 @@ export function SalesForm({ staff, shops, products, orderTakers = [], createSale
                     type="number"
                     min="0"
                     step="1"
-                    className={`h-8 w-20 rounded-md border px-2 text-right text-xs text-slate-900 shadow-sm outline-none focus:ring-1 focus:ring-slate-500 ${
-                      getRowError(row)
-                        ? "border-red-500 focus:border-red-500"
-                        : "border-slate-300 bg-white focus:border-slate-500"
-                    }`}
+                    className={`h-8 w-20 rounded-md border px-2 text-right text-xs text-slate-900 shadow-sm outline-none focus:ring-1 focus:ring-slate-500 ${getRowError(row)
+                      ? "border-red-500 focus:border-red-500"
+                      : "border-slate-300 bg-white focus:border-slate-500"
+                      }`}
                     value={row.quantity}
                     onChange={(e) =>
                       onChangeRow(index, "quantity", e.target.value)
@@ -249,6 +264,19 @@ export function SalesForm({ staff, shops, products, orderTakers = [], createSale
                   value={row.price}
                   onChange={(e) =>
                     onChangeRow(index, "price", e.target.value)
+                  }
+                />
+              </TD>
+              <TD className="text-right">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="h-8 w-20 rounded-md border border-slate-300 bg-white px-2 text-right text-xs text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
+                  placeholder="0.00"
+                  value={row.discount}
+                  onChange={(e) =>
+                    onChangeRow(index, "discount", e.target.value)
                   }
                 />
               </TD>
@@ -285,9 +313,17 @@ export function SalesForm({ staff, shops, products, orderTakers = [], createSale
           <span className="text-xs text-slate-600">
             Total items: {rows.length}
           </span>
-          <span className="text-sm font-semibold">
-            Total: {grandTotal.toFixed(2)}
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <div className="text-[10px] text-slate-500">
+              Subtotal: {subtotal.toFixed(2)}
+            </div>
+            <div className="text-[10px] text-red-500">
+              Discount: -{totalDiscount.toFixed(2)}
+            </div>
+            <div className="text-sm font-bold text-slate-900">
+              Total: {grandTotal.toFixed(2)}
+            </div>
+          </div>
           <Button type="submit" disabled={hasRowErrors}>
             Save sale
           </Button>

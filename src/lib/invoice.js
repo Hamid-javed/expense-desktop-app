@@ -187,6 +187,7 @@ export async function generateInvoicePdf(
     const desc = `${sku} / ${name}`;
     const qty = item.quantity ?? 0;
     const price = item.price ?? 0;
+    const discount = item.discount ?? 0;
     const net = item.lineTotal ?? 0;
     const unit = prod?.unit || "pcs";
 
@@ -200,7 +201,7 @@ export async function generateInvoicePdf(
     draw(formatNum(price), colW[4].x, y, 8);
     draw("0.00", colW[5].x, y, 8);
     draw("0.00", colW[6].x, y, 8);
-    draw("0.00", colW[7].x, y, 8);
+    draw(formatNum(discount), colW[7].x, y, 8);
     draw(formatNum(net), colW[8].x, y, 8);
     y -= 14;
   }
@@ -212,10 +213,18 @@ export async function generateInvoicePdf(
   draw(String(totalQty), colW[2].x, y, 8, true);
   draw("0.00", colW[3].x, y, 8, true);
   draw(formatNum(totalTax), colW[5].x, y, 8, true);
+  draw(formatNum(sale.totalDiscount || 0), colW[7].x, y, 8, true);
   draw(formatNum(totalNet), colW[8].x, y, 8, true);
   y -= 20;
 
   // --- Totals summary (right side) ---
+  const subtotal = (sale.totalAmount ?? 0) + (sale.totalDiscount ?? 0);
+  draw("Subtotal:", width - margin - 130, y, small, true);
+  draw(formatNum(subtotal), width - margin - 55, y, small);
+  y -= 14;
+  draw("Total Discount:", width - margin - 130, y, small, true);
+  draw(`- ${formatNum(sale.totalDiscount)}`, width - margin - 55, y, small);
+  y -= 16;
   const totalLabel = "Total Amount:";
   const totalVal = `${formatNum(sale.totalAmount)}/-`;
   draw(totalLabel, width - margin - 130, y, small, true);
@@ -322,17 +331,18 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
   // --- Table header: Invoice # | Date | OT | Staff | Amount | Cash | Credit | Status ---
   const tableLeft = margin;
   const colW = [
-    { w: 70, x: tableLeft },           // Invoice #
-    { w: 75, x: tableLeft + 70 },      // Date
-    { w: 80, x: tableLeft + 145 },     // OT
-    { w: 85, x: tableLeft + 225 },     // Staff
-    { w: 60, x: tableLeft + 310 },     // Amount
-    { w: 55, x: tableLeft + 370 },     // Cash
-    { w: 55, x: tableLeft + 425 },     // Credit
-    { w: 50, x: tableLeft + 480 },     // Status
+    { w: 60, x: tableLeft },           // Invoice #
+    { w: 65, x: tableLeft + 60 },      // Date
+    { w: 70, x: tableLeft + 125 },     // OT
+    { w: 75, x: tableLeft + 195 },     // Staff
+    { w: 40, x: tableLeft + 270 },     // Disc
+    { w: 50, x: tableLeft + 310 },     // Amount
+    { w: 50, x: tableLeft + 360 },     // Cash
+    { w: 50, x: tableLeft + 410 },     // Credit
+    { w: 55, x: tableLeft + 460 },     // Status
   ];
 
-  const headers = ["Invoice #", "Date", "OT", "Staff", "Amount", "Cash", "Credit", "Status"];
+  const headers = ["Invoice #", "Date", "OT", "Staff", "Disc", "Amount", "Cash", "Credit", "Status"];
   headers.forEach((h, i) => {
     draw(h, colW[i].x, y, small, true);
   });
@@ -341,6 +351,7 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
   y -= 10;
 
   // --- Invoice rows ---
+  let grandDiscount = 0;
   let grandAmount = 0;
   let grandCash = 0;
   let grandCredit = 0;
@@ -357,11 +368,13 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
     const dateStr = sale.date ? formatDateDDMMYYYY(sale.date) : "-";
     const ot = sale.orderTakerId?.name || "-";
     const staff = sale.staffId?.name || "-";
+    const discount = sale.totalDiscount ?? 0;
     const amount = sale.totalAmount ?? 0;
     const cash = sale.cashCollected ?? 0;
     const credit = sale.creditRemaining ?? 0;
     const status = (sale.status || "unpaid").toUpperCase();
 
+    grandDiscount += discount;
     grandAmount += amount;
     grandCash += cash;
     grandCredit += credit;
@@ -370,10 +383,11 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
     draw(dateStr, colW[1].x, y, small);
     draw(ot.length > 12 ? ot.slice(0, 10) + ".." : ot, colW[2].x, y, small);
     draw(staff.length > 12 ? staff.slice(0, 10) + ".." : staff, colW[3].x, y, small);
-    draw((amount).toFixed(2), colW[4].x, y, small);
-    draw((cash).toFixed(2), colW[5].x, y, small);
-    draw((credit).toFixed(2), colW[6].x, y, small);
-    draw(status, colW[7].x, y, small);
+    draw((discount).toFixed(2), colW[4].x, y, small);
+    draw((amount).toFixed(2), colW[5].x, y, small);
+    draw((cash).toFixed(2), colW[6].x, y, small);
+    draw((credit).toFixed(2), colW[7].x, y, small);
+    draw(status.length > 8 ? status.slice(0, 6) + ".." : status, colW[8].x, y, small);
     y -= 12;
   }
 
@@ -381,9 +395,10 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
   drawLine(margin, y, width - margin, y);
   y -= 12;
   draw("Total", colW[0].x, y, small, true);
-  draw(grandAmount.toFixed(2), colW[4].x, y, small, true);
-  draw(grandCash.toFixed(2), colW[5].x, y, small, true);
-  draw(grandCredit.toFixed(2), colW[6].x, y, small, true);
+  draw(grandDiscount.toFixed(2), colW[4].x, y, small, true);
+  draw(grandAmount.toFixed(2), colW[5].x, y, small, true);
+  draw(grandCash.toFixed(2), colW[6].x, y, small, true);
+  draw(grandCredit.toFixed(2), colW[7].x, y, small, true);
 
   const bytes = await pdfDoc.save();
   return bytes;
@@ -466,25 +481,28 @@ export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr 
   // --- Table header: Shop Name | Number | Invoice ID | Cash | Credit | Total Amount ---
   const tableLeft = margin;
   const colW = [
-    { w: 130, x: tableLeft }, // Shop Name
-    { w: 85, x: tableLeft + 130 }, // Number
-    { w: 95, x: tableLeft + 215 }, // Invoice ID
-    { w: 65, x: tableLeft + 310 }, // Cash (empty)
-    { w: 65, x: tableLeft + 375 }, // Credit (empty)
-    { w: 80, x: tableLeft + 440 }, // Total Amount
+    { w: 110, x: tableLeft }, // Shop Name
+    { w: 85, x: tableLeft + 110 }, // Number
+    { w: 95, x: tableLeft + 195 }, // Invoice ID
+    { w: 45, x: tableLeft + 290 }, // Disc
+    { w: 55, x: tableLeft + 335 }, // Cash (empty)
+    { w: 55, x: tableLeft + 390 }, // Credit (empty)
+    { w: 75, x: tableLeft + 445 }, // Total Amount
   ];
 
   draw("Shop Name", colW[0].x, y, 9, true);
   draw("Number", colW[1].x, y, 9, true);
   draw("Invoice ID", colW[2].x, y, 9, true);
-  draw("Cash", colW[3].x, y, 9, true);
-  draw("Credit", colW[4].x, y, 9, true);
-  draw("Total Amount", colW[5].x, y, 9, true);
+  draw("Disc", colW[3].x, y, 9, true);
+  draw("Cash", colW[4].x, y, 9, true);
+  draw("Credit", colW[5].x, y, 9, true);
+  draw("Total Amount", colW[6].x, y, 9, true);
   y -= 14;
   drawLine(margin, y, width - margin, y);
   y -= 12;
 
   // --- Shop rows ---
+  let grandDiscount = 0;
   let grandTotal = 0;
   const lineGap = 6; // gap between row text and underline
   const rowGap = 10; // gap between underline and next row
@@ -502,24 +520,28 @@ export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr 
     const invoiceIdDisplay = Array.isArray(row.invoiceIds)
       ? row.invoiceIds.map((id) => (typeof id === "number" ? `${INVOICE_PREFIX}${id}` : id)).join(", ")
       : (row.invoiceId != null ? `${INVOICE_PREFIX}${row.invoiceId}` : "-");
+    const discount = row.totalDiscount ?? 0;
     const total = row.totalAmount ?? 0;
 
     draw(name, colW[0].x, y, 9);
     draw(number, colW[1].x, y, 9);
     draw(invoiceIdDisplay, colW[2].x, y, 8);
+    draw(discount.toFixed(2), colW[3].x, y, 8);
     // Cash and Credit left empty for salesman to write
-    draw(`${total.toFixed(2)}/-`, colW[5].x, y, 9);
+    draw(`${total.toFixed(2)}/-`, colW[6].x, y, 9);
     // Draw line just below row, then leave gap before next row
     y -= lineGap;
     drawLine(margin, y, width - margin, y);
     y -= rowGap;
 
+    grandDiscount += discount;
     grandTotal += total;
   }
 
   // --- Total row ---
   draw("Total Amount:", colW[0].x, y, 9, true);
-  draw(`${grandTotal.toFixed(2)}/-`, colW[5].x, y, 10, true);
+  draw(grandDiscount.toFixed(2), colW[3].x, y, 9, true);
+  draw(`${grandTotal.toFixed(2)}/-`, colW[6].x, y, 10, true);
 
   const bytes = await pdfDoc.save();
   return bytes;

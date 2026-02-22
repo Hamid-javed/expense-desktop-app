@@ -157,10 +157,11 @@ export async function updateSaleItemQuantity(formData) {
 
     // Update the item
     item.quantity = validated.newQuantity;
-    item.lineTotal = item.quantity * item.price;
+    item.lineTotal = item.quantity * (item.price - (item.discount || 0));
 
-    // Recalculate sale total
-    sale.totalAmount = sale.items.reduce((sum, it) => sum + it.lineTotal, 0);
+    // Recalculate sale total and total discount
+    sale.totalAmount = sale.items.reduce((sum, it) => sum + (it.lineTotal || 0), 0);
+    sale.totalDiscount = sale.items.reduce((sum, it) => sum + (it.quantity * (it.discount || 0)), 0);
 
     // Update product quantity and stats
     const product = await Product.findOne(
@@ -172,7 +173,8 @@ export async function updateSaleItemQuantity(formData) {
 
     // Calculate changes
     const quantityChange = -quantityDiff; // Negative because we're reversing the sale effect
-    const oldLineTotal = oldQuantity * item.price;
+    const oldEffectivePrice = item.price - (item.discount || 0);
+    const oldLineTotal = oldQuantity * oldEffectivePrice;
     const revenueChange = item.lineTotal - oldLineTotal;
     const oldSaleTotal = sale.totalAmount - revenueChange; // Sale total before update
     const saleTotalChange = sale.totalAmount - oldSaleTotal;
@@ -196,7 +198,7 @@ export async function updateSaleItemQuantity(formData) {
     const saleIdValue = sale._id || sale.id;
     await Sale.findOneAndUpdate(
       withUserId(userId, { _id: saleIdValue }),
-      { items: sale.items, totalAmount: sale.totalAmount }
+      { items: sale.items, totalAmount: sale.totalAmount, totalDiscount: sale.totalDiscount }
     );
 
     // Revalidate paths

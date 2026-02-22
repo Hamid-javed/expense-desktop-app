@@ -54,7 +54,8 @@ export async function createReturn(formData) {
       };
     }
 
-    const returnAmount = quantity * item.price;
+    const effectivePrice = item.price - (item.discount || 0);
+    const returnAmount = quantity * effectivePrice;
 
     const returnData = {
       saleId: sale._id ?? sale.id,
@@ -84,11 +85,12 @@ export async function createReturn(formData) {
       newItems[itemIndex] = {
         ...item,
         quantity: newQty,
-        lineTotal: newQty * item.price,
+        lineTotal: newQty * (item.price - (item.discount || 0)),
       };
     }
 
-    const newTotalAmount = newItems.reduce((sum, it) => sum + it.lineTotal, 0);
+    const newTotalAmount = newItems.reduce((sum, it) => sum + (it.lineTotal || 0), 0);
+    const newTotalDiscount = newItems.reduce((sum, it) => sum + (it.quantity * (it.discount || 0)), 0);
     const cashCollected = sale.cashCollected ?? 0;
     const newCashCollected = Math.min(cashCollected, newTotalAmount);
     const newCreditRemaining = newTotalAmount - newCashCollected;
@@ -99,6 +101,7 @@ export async function createReturn(formData) {
       {
         items: newItems,
         totalAmount: newTotalAmount,
+        totalDiscount: newTotalDiscount,
         cashCollected: newCashCollected,
         creditRemaining: newCreditRemaining,
       }

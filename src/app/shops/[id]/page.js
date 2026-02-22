@@ -158,6 +158,11 @@ export default async function ShopDetailPage({ params, searchParams }) {
                       maximumFractionDigits: 2,
                     })}
                   </div>
+                  {sale.totalDiscount > 0 && (
+                    <div className="text-[10px] text-red-500 text-right">
+                      Incl. Discount: {sale.totalDiscount.toFixed(2)}
+                    </div>
+                  )}
                   <div className="text-xs text-slate-600">
                     Cash: {(sale.cashCollected ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} · Credit: {(sale.creditRemaining ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   </div>
@@ -196,9 +201,9 @@ export default async function ShopDetailPage({ params, searchParams }) {
                             <TD className="text-slate-600 text-xs">
                               {createdAt
                                 ? new Date(createdAt).toLocaleString(undefined, {
-                                    dateStyle: "short",
-                                    timeStyle: "short",
-                                  })
+                                  dateStyle: "short",
+                                  timeStyle: "short",
+                                })
                                 : "-"}
                             </TD>
                           </TR>
@@ -215,6 +220,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
                     <TH>SKU</TH>
                     <TH className="text-right">Quantity</TH>
                     <TH className="text-right">Unit Price</TH>
+                    <TH className="text-right">Discount</TH>
                     <TH className="text-right">Line Total</TH>
                   </TR>
                 </THead>
@@ -232,6 +238,9 @@ export default async function ShopDetailPage({ params, searchParams }) {
                         </TD>
                         <TD className="text-right">
                           {item.price.toFixed(2)}
+                        </TD>
+                        <TD className="text-right text-red-500">
+                          {item.discount ? `- ${item.discount.toFixed(2)}` : "0.00"}
                         </TD>
                         <TD className="text-right font-medium">
                           {item.lineTotal.toFixed(2)}
@@ -486,6 +495,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
                   <TH>Date</TH>
                   <TH>OT</TH>
                   <TH>Staff</TH>
+                  <TH className="text-right">Discount</TH>
                   <TH className="text-right">Amount</TH>
                   <TH className="text-right">Cash</TH>
                   <TH className="text-right">Credit</TH>
@@ -516,6 +526,11 @@ export default async function ShopDetailPage({ params, searchParams }) {
                       {sale.staffId?.staffId
                         ? ` (${sale.staffId.staffId})`
                         : ""}
+                    </TD>
+                    <TD className="text-right text-red-500 text-xs">
+                      {sale.totalDiscount > 0
+                        ? ` ${sale.totalDiscount.toFixed(2)}`
+                        : "0.00"}
                     </TD>
                     <TD className="text-right font-medium">
                       {(sale.totalAmount ?? 0).toLocaleString(undefined, {

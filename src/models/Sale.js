@@ -12,6 +12,7 @@ const SaleItemSchema = new mongoose.Schema(
     },
     quantity: { type: Number, required: true, min: 0 },
     price: { type: Number, required: true, min: 0 },
+    discount: { type: Number, default: 0, min: 0 },
     lineTotal: { type: Number, required: true, min: 0 },
   },
   { _id: false }
@@ -27,6 +28,7 @@ const SaleSchemaDef = new mongoose.Schema(
     orderTakerId: { type: mongoose.Schema.Types.ObjectId, ref: "OrderTaker" },
     orderTakeDate: { type: Date },
     items: [SaleItemSchema],
+    totalDiscount: { type: Number, default: 0, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     paymentType: { type: String, enum: PAYMENT_TYPES, required: true },
     cashCollected: { type: Number, default: 0, min: 0 },

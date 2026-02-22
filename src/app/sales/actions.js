@@ -24,6 +24,7 @@ const saleSchema = z.object({
         productId: z.string().min(1),
         quantity: z.coerce.number().positive(),
         price: z.coerce.number().nonnegative(),
+        discount: z.coerce.number().nonnegative().default(0),
       })
     )
     .min(1),
@@ -58,8 +59,9 @@ export async function createSale(formData) {
       const productId = formData.get(`items[${i}][productId]`)?.trim();
       const quantity = formData.get(`items[${i}][quantity]`);
       const price = formData.get(`items[${i}][price]`);
+      const discount = formData.get(`items[${i}][discount]`);
       if (!productId || !quantity) continue;
-      rawItems.push({ productId, quantity, price });
+      rawItems.push({ productId, quantity, price, discount });
     }
 
     const parsed = saleSchema.safeParse({
@@ -121,8 +123,14 @@ export async function createSale(formData) {
       productId: it.productId,
       quantity: it.quantity,
       price: it.price,
-      lineTotal: it.quantity * it.price,
+      discount: it.discount,
+      lineTotal: it.quantity * (it.price - it.discount),
     }));
+
+    const newTotalDiscount = itemsWithTotals.reduce(
+      (sum, it) => sum + (it.quantity * it.discount),
+      0
+    );
 
     const newTotalAmount = itemsWithTotals.reduce(
       (sum, it) => sum + it.lineTotal,
@@ -145,13 +153,21 @@ export async function createSale(formData) {
         if (existingItemsMap.has(productIdStr)) {
           // If product already exists, merge quantities
           const existing = existingItemsMap.get(productIdStr);
-          existing.quantity += item.quantity;
-          existing.lineTotal = existing.quantity * existing.price;
+          const oldQty = existing.quantity;
+          const oldDisc = existing.discount || 0;
+          const newQty = item.quantity;
+          const newDisc = item.discount || 0;
+
+          existing.quantity = oldQty + newQty;
+          // Calculate weighted average for per-unit discount
+          existing.discount = ((oldQty * oldDisc) + (newQty * newDisc)) / existing.quantity;
+          existing.lineTotal = existing.quantity * (existing.price - existing.discount);
         } else {
           existingItemsMap.set(productIdStr, {
             productId: item.productId,
             quantity: item.quantity,
             price: item.price,
+            discount: item.discount || 0,
             lineTotal: item.lineTotal,
           });
         }
@@ -163,9 +179,15 @@ export async function createSale(formData) {
         if (existingItemsMap.has(productIdStr)) {
           // Same product: add quantities
           const existing = existingItemsMap.get(productIdStr);
-          const oldQuantity = existing.quantity;
-          existing.quantity += newItem.quantity;
-          existing.lineTotal = existing.quantity * existing.price;
+          const oldQty = existing.quantity;
+          const oldDisc = existing.discount || 0;
+          const newQty = newItem.quantity;
+          const newDisc = newItem.discount || 0;
+
+          existing.quantity = oldQty + newQty;
+          // Calculate weighted average for per-unit discount
+          existing.discount = ((oldQty * oldDisc) + (newQty * newDisc)) / existing.quantity;
+          existing.lineTotal = existing.quantity * (existing.price - existing.discount);
 
           // Track product updates (only for the new quantity)
           productUpdates.push({
@@ -190,6 +212,10 @@ export async function createSale(formData) {
 
       // Convert map back to array
       const mergedItems = Array.from(existingItemsMap.values());
+      const mergedTotalDiscount = mergedItems.reduce(
+        (sum, it) => sum + (it.discount || 0),
+        0
+      );
       const mergedTotalAmount = mergedItems.reduce(
         (sum, it) => sum + it.lineTotal,
         0
@@ -203,16 +229,17 @@ export async function createSale(formData) {
       // Update existing sale: set cash/credit for merged total from new payment
       const newCash = data.paymentType === "cash" ? newTotalAmount : 0;
       const newCredit = data.paymentType === "credit" ? newTotalAmount : 0;
-      
+
       // Get the sale ID (handle both MongoDB _id and SQLite id)
       const saleId = existingSale._id || existingSale.id;
-      
+
       // Update the sale using SQLite-compatible method (include order taker from form)
       const saleFilter = isMongoDB() ? { _id: saleId, userId } : { _id: saleId };
       sale = await Sale.findOneAndUpdate(
         saleFilter,
         {
           items: mergedItems,
+          totalDiscount: mergedTotalDiscount,
           totalAmount: mergedTotalAmount,
           cashCollected: (existingSale.cashCollected ?? 0) + newCash,
           creditRemaining: (existingSale.creditRemaining ?? 0) + newCredit,
@@ -235,6 +262,7 @@ export async function createSale(formData) {
         orderTakerId: data.orderTakerId,
         orderTakeDate,
         items: itemsWithTotals,
+        totalDiscount: newTotalDiscount,
         totalAmount: newTotalAmount,
         paymentType: data.paymentType,
         cashCollected,
@@ -358,13 +386,13 @@ export async function toggleSaleStatus(formData) {
     const isCurrentlyPaid = sale.status === "paid";
     const newStatus = isCurrentlyPaid ? "unpaid" : "paid";
     const totalAmount = sale.totalAmount ?? 0;
-    
+
     // When marking as paid, set cashCollected to totalAmount and creditRemaining to 0
     // When marking as unpaid, set both cashCollected and creditRemaining to 0
     const updateData = {
       status: newStatus,
     };
-    
+
     if (newStatus === "paid") {
       // Paid means all amount is given in cash
       updateData.cashCollected = totalAmount;
@@ -374,7 +402,7 @@ export async function toggleSaleStatus(formData) {
       updateData.cashCollected = 0;
       updateData.creditRemaining = 0;
     }
-    
+
     const saleFilter = isMongoDB() ? { _id: saleIdValue, userId } : { _id: saleIdValue };
     await Sale.findOneAndUpdate(saleFilter, updateData);
 

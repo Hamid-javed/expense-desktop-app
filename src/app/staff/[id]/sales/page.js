@@ -343,6 +343,11 @@ export default async function StaffSalesPage({ params, searchParams }) {
                                 maximumFractionDigits: 2,
                               })}
                             </div>
+                            {sale.totalDiscount > 0 && (
+                              <div className="text-[10px] text-red-500 text-right">
+                                Incl. Discount: {sale.totalDiscount.toFixed(2)}
+                              </div>
+                            )}
                             <InvoiceDownloadPrompt saleId={sale._id.toString()} />
                           </div>
                         </div>
@@ -353,6 +358,7 @@ export default async function StaffSalesPage({ params, searchParams }) {
                               <TH>SKU</TH>
                               <TH className="text-right">Quantity</TH>
                               <TH className="text-right">Unit Price</TH>
+                              <TH className="text-right">Discount</TH>
                               <TH className="text-right">Line Total</TH>
                             </TR>
                           </THead>
@@ -375,6 +381,9 @@ export default async function StaffSalesPage({ params, searchParams }) {
                                   </TD>
                                   <TD className="text-right">
                                     {item.price.toFixed(2)}
+                                  </TD>
+                                  <TD className="text-right text-red-500">
+                                    {item.discount ? `- ${item.discount.toFixed(2)}` : "0.00"}
                                   </TD>
                                   <TD className="text-right font-medium">
                                     {item.lineTotal.toFixed(2)}
