@@ -87,7 +87,7 @@ export async function generateInvoicePdf(
     draw(`Contact: ${shop.phone}`, colLeft, y, small);
     y -= 12;
   }
-  draw(`CNIC: ${shop?.cnic || "-"}`, colLeft, y, small);
+  draw(`Invoice ID: ${INVOICE_PREFIX}${sale.invoiceId}`, colLeft, y, small);
   y -= 12;
   y -= 8;
 
@@ -125,8 +125,8 @@ export async function generateInvoicePdf(
     draw("Salesman:", colRight, yRight, small, true);
     draw(staff.name || "-", colRight + 90, yRight, small);
     yRight -= 14;
-    draw("Salesman CNIC:", colRight, yRight, small, true);
-    draw(staff.cnic || "-", colRight + 90, yRight, small);
+    draw("Invoice ID:", colRight, yRight, small, true);
+    draw(`${INVOICE_PREFIX}${sale.invoiceId}`, colRight + 90, yRight, small);
     yRight -= 14;
   }
 
@@ -452,9 +452,6 @@ export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr 
   draw("Salesman:", colRight, yRight, small, true);
   draw(staff?.name || "-", colRight + 90, yRight, small);
   yRight -= 14;
-  draw("Salesman CNIC:", colRight, yRight, small, true);
-  draw(staff?.cnic || "-", colRight + 90, yRight, small);
-  yRight -= 14;
 
   if (route) {
     draw("Route:", colRight, yRight, small, true);
@@ -466,12 +463,12 @@ export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr 
   draw(dateStr || "-", colRight + 90, yRight, small);
 
 
-  // --- Table header: Shop Name | Number | CNIC | Cash | Credit | Total Amount ---
+  // --- Table header: Shop Name | Number | Invoice ID | Cash | Credit | Total Amount ---
   const tableLeft = margin;
   const colW = [
     { w: 130, x: tableLeft }, // Shop Name
     { w: 85, x: tableLeft + 130 }, // Number
-    { w: 95, x: tableLeft + 215 }, // CNIC
+    { w: 95, x: tableLeft + 215 }, // Invoice ID
     { w: 65, x: tableLeft + 310 }, // Cash (empty)
     { w: 65, x: tableLeft + 375 }, // Credit (empty)
     { w: 80, x: tableLeft + 440 }, // Total Amount
@@ -479,7 +476,7 @@ export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr 
 
   draw("Shop Name", colW[0].x, y, 9, true);
   draw("Number", colW[1].x, y, 9, true);
-  draw("CNIC", colW[2].x, y, 9, true);
+  draw("Invoice ID", colW[2].x, y, 9, true);
   draw("Cash", colW[3].x, y, 9, true);
   draw("Credit", colW[4].x, y, 9, true);
   draw("Total Amount", colW[5].x, y, 9, true);
@@ -502,12 +499,14 @@ export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr 
 
     const name = row.name?.toString().slice(0, 22) || "-";
     const number = row.phone || row.number || "-";
-    const cnic = row.cnic?.toString() || "-";
+    const invoiceIdDisplay = Array.isArray(row.invoiceIds)
+      ? row.invoiceIds.map((id) => (typeof id === "number" ? `${INVOICE_PREFIX}${id}` : id)).join(", ")
+      : (row.invoiceId != null ? `${INVOICE_PREFIX}${row.invoiceId}` : "-");
     const total = row.totalAmount ?? 0;
 
     draw(name, colW[0].x, y, 9);
     draw(number, colW[1].x, y, 9);
-    draw(cnic, colW[2].x, y, 8);
+    draw(invoiceIdDisplay, colW[2].x, y, 8);
     // Cash and Credit left empty for salesman to write
     draw(`${total.toFixed(2)}/-`, colW[5].x, y, 9);
     // Draw line just below row, then leave gap before next row

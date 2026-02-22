@@ -347,6 +347,9 @@ export default async function DashboardPage({ searchParams }) {
               <TBody>
                 {filteredSales.map((sale) => {
                   const statusDisplay = getStatusDisplay(sale);
+                  const total = sale.totalAmount ?? 0;
+                  const cash = sale.cashCollected ?? 0;
+                  const remaining = Math.max(0, total - cash);
                   return (
                     <TR key={sale._id.toString()}>
                       <TD className="font-mono text-xs">
@@ -369,44 +372,36 @@ export default async function DashboardPage({ searchParams }) {
                         {formatAmount(sale.cashCollected)}
                       </TD>
                       <TD className="text-right text-slate-600">
-                        {formatAmount(sale.creditRemaining)}
+                        {formatAmount(remaining)}
                       </TD>
                       <TD>{statusDisplay.text}</TD>
                     </TR>
                   );
                 })}
-                <TR className="border-t-2 border-slate-200 bg-slate-50 font-semibold w-full">
-                  <TD colSpan={4} className="text-left text-slate-700">
-                    Subtotal
-                  </TD>
-                  <TD className="text-left text-slate-900">
-                    {formatAmount(
-                      filteredSales.reduce(
-                        (sum, s) => sum + (s.totalAmount ?? 0),
-                        0
-                      )
-                    )}
-                  </TD>
-                  <TD className="text-right text-slate-700">
-                    Collected:
-                    {formatAmount(
-                      filteredSales.reduce(
-                        (sum, s) => sum + (s.cashCollected ?? 0),
-                        0
-                      )
-                    )}
-                  </TD>
-                  <TD className="text-right text-slate-700">
-                    Remaining:
-                    {formatAmount(
-                      filteredSales.reduce(
-                        (sum, s) => sum + (s.creditRemaining ?? 0),
-                        0
-                      )
-                    )}
-                  </TD>
-                  <TD></TD>
-                </TR>
+                {(() => {
+                  const subtotal = filteredSales.reduce((sum, s) => sum + (s.totalAmount ?? 0), 0);
+                  const collected = filteredSales.reduce((sum, s) => sum + (s.cashCollected ?? 0), 0);
+                  const remaining = subtotal - collected;
+                  return (
+                    <TR className="border-t-2 border-slate-200 bg-slate-50 font-semibold w-full">
+                      <TD colSpan={4} className="text-left text-slate-700">
+                        Subtotal
+                      </TD>
+                      <TD className="text-left text-slate-900">
+                        {formatAmount(subtotal)}
+                      </TD>
+                      <TD className="text-right text-slate-700">
+                        Collected:
+                        {formatAmount(collected)}
+                      </TD>
+                      <TD className="text-right text-slate-700">
+                        Remaining:
+                        {formatAmount(Math.max(0, remaining))}
+                      </TD>
+                      <TD></TD>
+                    </TR>
+                  );
+                })()}
               </TBody>
             </Table>
           )}

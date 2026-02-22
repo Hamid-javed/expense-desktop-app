@@ -49,7 +49,7 @@ export async function GET(req, { params }) {
     .populate("shopId")
     .lean();
 
-  // Group by shop and compute total per shop
+  // Group by shop and compute total per shop; collect invoice IDs per shop
   const shopMap = new Map();
   for (const sale of sales) {
     const shop = sale.shopId;
@@ -62,11 +62,13 @@ export async function GET(req, { params }) {
       shopMap.set(id, {
         name,
         phone,
-        cnic: shop.cnic || "",
+        invoiceIds: [],
         totalAmount: 0,
       });
     }
-    shopMap.get(id).totalAmount += sale.totalAmount || 0;
+    const entry = shopMap.get(id);
+    entry.totalAmount += sale.totalAmount || 0;
+    if (sale.invoiceId != null) entry.invoiceIds.push(sale.invoiceId);
   }
 
   const shops = Array.from(shopMap.values()).sort(
