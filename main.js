@@ -70,6 +70,12 @@ function createWindow() {
     }
   }
   const icon = fs.existsSync(iconPath) ? iconPath : undefined;
+
+  // Explicitly set app-level icon for taskbar consistency
+  if (icon && app.setAppUserModelId) {
+    app.setAppUserModelId(app.name);
+  }
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -119,11 +125,11 @@ function startNextServerPackaged() {
     app.quit();
     return;
   }
-  
+
   // Use bundled Node.js runtime if available, otherwise fallback to system node
   const bundledNodePath = path.join(process.resourcesPath, 'node-runtime', 'node.exe');
   const nodeExecutable = fs.existsSync(bundledNodePath) ? bundledNodePath : 'node';
-  
+
   // Use shell: false to properly handle paths with spaces on Windows
   // When using bundled node, we have a full path, so shell: false works fine
   // When falling back to system 'node', it will still work if node is in PATH

@@ -92,11 +92,9 @@ async function run() {
       nodeExe
     );
 
-    // Copy node_modules if needed (for npm)
-    const extractedModules = path.join(extractedNodeDir, 'node_modules');
-    if (fs.existsSync(extractedModules)) {
-      fs.cpSync(extractedModules, path.join(nodeDir, 'node_modules'), { recursive: true });
-    }
+    // Keep only node.exe, remove everything else (including node_modules/npm)
+    // to significantly reduce size as the standalone server doesn't need them.
+    console.log('Keeping only node.exe in runtime...');
 
     // Cleanup
     fs.rmSync(extractedNodeDir, { recursive: true, force: true });

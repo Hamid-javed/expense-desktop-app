@@ -8,6 +8,7 @@
   "build": {
     "appId": "com.expense.sales",
     "productName": "Expense & Sales Manager",
+    "compression": "maximum",
     "icon": "build/icon.ico",
     "files": [
       "main.js",
@@ -40,7 +41,11 @@
       "signAndEditExecutable": false
     },
     "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Expense & Sales Manager",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico"
     }
