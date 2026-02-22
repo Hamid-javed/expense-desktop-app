@@ -3,6 +3,8 @@ import { connectToDatabase } from "../../../../lib/db";
 import { requireUserId } from "../../../../lib/auth";
 import { withUserId } from "../../../../lib/tenant";
 import { Sale } from "../../../../models/Sale";
+import { Shop } from "../../../../models/Shop"; // Register Shop for Sale.populate("shopId")
+import { Staff } from "../../../../models/Staff"; // Register Staff for Sale.populate("staffId")
 import {
   getStartOfDayPK,
   getEndOfDayPK,

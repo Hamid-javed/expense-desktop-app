@@ -77,22 +77,22 @@ export async function upsertDailySalesSummary(formData) {
       }),
       isMongoDB()
         ? {
-            userId,
-            staffId: validated.staffId,
-            date: startOfDay,
-            cashSales: validated.cashSales,
-            creditSales: validated.creditSales,
-            isActive: true,
-            deletedAt: null,
-          }
+          userId,
+          staffId: validated.staffId,
+          date: startOfDay,
+          cashSales: validated.cashSales,
+          creditSales: validated.creditSales,
+          isActive: true,
+          deletedAt: null,
+        }
         : {
-            staffId: validated.staffId,
-            date: startOfDay,
-            cashSales: validated.cashSales,
-            creditSales: validated.creditSales,
-            isActive: true,
-            deletedAt: null,
-          },
+          staffId: validated.staffId,
+          date: startOfDay,
+          cashSales: validated.cashSales,
+          creditSales: validated.creditSales,
+          isActive: true,
+          deletedAt: null,
+        },
       {
         upsert: true,
         new: true,

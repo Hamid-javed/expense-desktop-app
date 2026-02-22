@@ -5,6 +5,7 @@ import { withUserId } from "../../../../../lib/tenant";
 import { Sale } from "../../../../../models/Sale";
 import { Staff } from "../../../../../models/Staff";
 import { RouteModel } from "../../../../../models/Route";
+import { Shop } from "../../../../../models/Shop";
 import { generateCombinedInvoicePdf } from "../../../../../lib/invoice";
 import { getStartOfDayPK, getEndOfDayPK } from "../../../../../lib/dateUtils";
 

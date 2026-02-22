@@ -3,6 +3,8 @@ import { connectToDatabase } from "../../../../../lib/db";
 import { requireUserId } from "../../../../../lib/auth";
 import { withUserId } from "../../../../../lib/tenant";
 import { Sale } from "../../../../../models/Sale";
+import { Shop } from "../../../../../models/Shop"; // Register Shop for Sale.populate("shopId")
+import { OrderTaker } from "../../../../../models/OrderTaker"; // Register OrderTaker for Sale.populate("orderTakerId")
 import { formatDatePK, getDaysExceeded, getTodayPK, getDateKeyPK } from "../../../../../lib/dateUtils";
 import { INVOICE_PREFIX } from "../../../../../lib/config";
 import ExcelJS from "exceljs";

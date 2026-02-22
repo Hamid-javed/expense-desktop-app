@@ -11,7 +11,6 @@ import { Card, CardBody, CardHeader } from "../../../../components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "../../../../components/ui/Table";
 import Link from "next/link";
 import { Button } from "../../../../components/ui/Button";
-import { DailySummaryForm } from "./DailySummaryForm";
 import { QuantityEditor } from "./QuantityEditor";
 import { InvoiceDownloadPrompt } from "./InvoiceDownloadPrompt";
 import { getTodayPK, getStartOfDayPK, getEndOfDayPK, getDateKeyPK, formatDatePK, parseDatePK } from "../../../../lib/dateUtils";
@@ -88,16 +87,6 @@ export default async function StaffSalesPage({ params, searchParams }) {
     summariesByDate[dateKey] = summary;
   });
 
-  // Calculate totals from daily summaries (not from individual sales)
-  const totalCash = allDailySummaries.reduce(
-    (sum, s) => sum + (s.cashSales || 0),
-    0
-  );
-  const totalCredit = allDailySummaries.reduce(
-    (sum, s) => sum + (s.creditSales || 0),
-    0
-  );
-  const totalSales = totalCash + totalCredit;
 
   // Calculate total cash per shop for the selected date only
   const salesForSelectedDate = await Sale.find(
@@ -204,45 +193,7 @@ export default async function StaffSalesPage({ params, searchParams }) {
         }
       />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader title="Total Sales" />
-          <CardBody>
-            <div className="text-2xl font-semibold">
-              {totalSales.toLocaleString(undefined, {
-                maximumFractionDigits: 2,
-              })}
-            </div>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="Cash Sales" />
-          <CardBody>
-            <div className="text-2xl font-semibold">
-              {totalCash.toLocaleString(undefined, {
-                maximumFractionDigits: 2,
-              })}
-            </div>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="Credit Sales" />
-          <CardBody>
-            <div className="text-2xl font-semibold">
-              {totalCredit.toLocaleString(undefined, {
-                maximumFractionDigits: 2,
-              })}
-            </div>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="Total Days" />
-          <CardBody>
-            <div className="text-2xl font-semibold">{sortedDates.length}</div>
-          </CardBody>
-        </Card>
-      </div>
+
 
       {/* Sales Summary for Selected Date */}
       {Object.keys(cashByShop).length > 0 && (
@@ -358,47 +309,10 @@ export default async function StaffSalesPage({ params, searchParams }) {
 
           return (
             <Card key={dateKey}>
-              <CardHeader
-                title={formatDatePK(dateObj, {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-                actions={
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-sm font-semibold text-slate-700">
-                      Cash: {dateCash.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                    <span className="text-sm font-semibold text-slate-700">
-                      Credit: {dateCredit.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                    <span className="text-sm font-semibold text-slate-900">
-                      Total: {dateTotal.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                }
-              />
+
               <CardBody>
                 <div className="space-y-4">
-                  {/* Daily Summary Input for this date */}
-                  <div className="mb-4 pb-4 border-b border-slate-200">
-                    <h4 className="text-sm font-semibold text-slate-700 mb-2">
-                      Daily Sales Summary
-                    </h4>
-                    <DailySummaryForm
-                      staffId={id.toString()}
-                      date={dateKey}
-                      cashSales={dateCash}
-                      creditSales={dateCredit}
-                    />
-                  </div>
+
                   {dateSales.map((sale) => {
                     const shop = sale.shopId;
                     return (
