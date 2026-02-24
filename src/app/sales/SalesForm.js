@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Table, THead, TBody, TR, TH, TD } from "../../components/ui/Table";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import { PAYMENT_TYPES } from "../../lib/config";
 
 export function SalesForm({ saleman, shops, products, orderTakers = [], createSale }) {
@@ -11,6 +12,13 @@ export function SalesForm({ saleman, shops, products, orderTakers = [], createSa
   ]);
   const [paymentType, setPaymentType] = useState(PAYMENT_TYPES[0]);
   const [formError, setFormError] = useState(null);
+  const [shopId, setShopId] = useState("");
+
+  const shopOptions = (shops || []).map((s) => ({ id: s._id, label: s.name }));
+  const productOptions = (products || []).map((p) => ({
+    id: p._id,
+    label: `${p.name} (${p.sku})`
+  }));
   const defaultDate = (() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -104,6 +112,7 @@ export function SalesForm({ saleman, shops, products, orderTakers = [], createSa
           return;
         }
         setRows([{ productId: "", quantity: "", price: "", discount: "" }]);
+        setShopId("");
       }}
       className="space-y-4"
     >
@@ -128,21 +137,15 @@ export function SalesForm({ saleman, shops, products, orderTakers = [], createSa
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
-          <span>Shop</span>
-          <select
-            name="shopId"
-            required
-            className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
-          >
-            <option value="">Select shop</option>
-            {shops.map((s) => (
-              <option key={s._id} value={s._id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SearchableSelect
+          label="Shop"
+          name="shopId"
+          placeholder="Select shop..."
+          required
+          options={shopOptions}
+          value={shopId}
+          onChange={(val) => setShopId(val)}
+        />
         <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
           <span>Date</span>
           <input
@@ -209,24 +212,13 @@ export function SalesForm({ saleman, shops, products, orderTakers = [], createSa
           {computedRows.map((row, index) => (
             <TR key={index}>
               <TD>
-                <select
-                  className="h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
+                <SearchableSelect
+                  placeholder="Select product..."
+                  options={productOptions}
                   value={row.productId}
-                  onChange={(e) =>
-                    onChangeRow(index, "productId", e.target.value)
-                  }
-                >
-                  <option value="">Select product</option>
-                  {products && products.length > 0 ? (
-                    products.map((p) => (
-                      <option key={p._id} value={p._id}>
-                        {p.name}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="" disabled>No products available</option>
-                  )}
-                </select>
+                  onChange={(val) => onChangeRow(index, "productId", val)}
+                  className="w-full"
+                />
               </TD>
               <TD className="text-right">
                 <div className="flex flex-col items-end gap-0.5">

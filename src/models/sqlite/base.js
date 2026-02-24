@@ -156,7 +156,7 @@ export class SQLiteModel {
 
     // Handle MongoDB-style operators
     let finalUpdate = { ...update };
-    
+
     // Handle $unset operator (set fields to null)
     if (update.$unset) {
       finalUpdate = {};
@@ -185,7 +185,7 @@ export class SQLiteModel {
       if (!existing) {
         throw new Error(`Record with id ${id} not found`);
       }
-      
+
       finalUpdate = {};
       // Copy existing values (excluding id and _id)
       for (const [key, value] of Object.entries(existing)) {
@@ -193,13 +193,13 @@ export class SQLiteModel {
           finalUpdate[key] = value;
         }
       }
-      
+
       // Apply increments
       for (const [field, increment] of Object.entries(update.$inc)) {
         const currentValue = finalUpdate[field] || 0;
         finalUpdate[field] = currentValue + increment;
       }
-      
+
       // Merge any other non-operator fields
       for (const [key, value] of Object.entries(update)) {
         if (key !== '$inc' && !key.startsWith('$') && key !== '_id' && key !== 'id') {
@@ -242,15 +242,15 @@ export class SQLiteModel {
    */
   async updateMany(query, update) {
     const db = this.getDB();
-    
+
     // Find all matching records
     const queryWrapper = this.find(query);
     const records = await queryWrapper.execute();
-    
+
     if (!Array.isArray(records) || records.length === 0) {
       return { modifiedCount: 0 };
     }
-    
+
     // Update each record
     let modifiedCount = 0;
     for (const record of records) {
@@ -260,7 +260,7 @@ export class SQLiteModel {
         modifiedCount++;
       }
     }
-    
+
     return { modifiedCount };
   }
 
@@ -296,11 +296,11 @@ export class SQLiteModel {
    */
   deleteMany(query = {}) {
     const db = this.getDB();
-    
+
     // If query is empty (clearing all), do hard delete for seeding purposes
     // Otherwise do soft delete
     const isEmptyQuery = Object.keys(query).length === 0;
-    
+
     if (isEmptyQuery) {
       // Hard delete for clearing all data (used in seeding)
       let sql = `DELETE FROM ${this.tableName}`;
@@ -368,7 +368,7 @@ export class SQLiteModel {
    */
   async populateItem(item, fields) {
     if (!item || typeof fields !== "string") return item;
-    
+
     // Handle nested populate like "items.productId"
     if (fields.includes(".")) {
       const [parentField, childField] = fields.split(".");
@@ -457,36 +457,36 @@ export class SQLiteModel {
       // $match stage - build WHERE conditions
       if (stage.$match) {
         const match = stage.$match;
-        
+
         if (match.deletedAt === null || match.deletedAt === undefined) {
           whereConditions.push("deletedAt IS NULL");
         }
 
         if (match.date) {
           if (match.date.$gte !== undefined) {
-            const dateValue = match.date.$gte instanceof Date 
-              ? match.date.$gte.getTime() 
+            const dateValue = match.date.$gte instanceof Date
+              ? match.date.$gte.getTime()
               : match.date.$gte;
             whereConditions.push(`date >= ?`);
             params.push(dateValue);
           }
           if (match.date.$lte !== undefined) {
-            const dateValue = match.date.$lte instanceof Date 
-              ? match.date.$lte.getTime() 
+            const dateValue = match.date.$lte instanceof Date
+              ? match.date.$lte.getTime()
               : match.date.$lte;
             whereConditions.push(`date <= ?`);
             params.push(dateValue);
           }
           if (match.date.$gt !== undefined) {
-            const dateValue = match.date.$gt instanceof Date 
-              ? match.date.$gt.getTime() 
+            const dateValue = match.date.$gt instanceof Date
+              ? match.date.$gt.getTime()
               : match.date.$gt;
             whereConditions.push(`date > ?`);
             params.push(dateValue);
           }
           if (match.date.$lt !== undefined) {
-            const dateValue = match.date.$lt instanceof Date 
-              ? match.date.$lt.getTime() 
+            const dateValue = match.date.$lt instanceof Date
+              ? match.date.$lt.getTime()
               : match.date.$lt;
             whereConditions.push(`date < ?`);
             params.push(dateValue);
@@ -497,7 +497,7 @@ export class SQLiteModel {
       // $group stage - build aggregation
       if (stage.$group) {
         const group = stage.$group;
-        
+
         // Handle _id grouping
         if (group._id === null || group._id === undefined) {
           // No grouping - aggregate all rows
@@ -510,7 +510,7 @@ export class SQLiteModel {
         // Handle aggregation operations
         for (const [outputField, operation] of Object.entries(group)) {
           if (outputField === "_id") continue;
-          
+
           if (operation.$sum) {
             const field = operation.$sum.replace("$", "");
             selectFields.push(`SUM(${field}) as ${outputField}`);
@@ -532,16 +532,16 @@ export class SQLiteModel {
 
     // Build SQL query
     let sql = `SELECT `;
-    
+
     if (selectFields.length > 0) {
       sql += selectFields.join(", ");
     } else {
       // Default: sum totalAmount if no aggregation specified
       sql += `SUM(totalAmount) as total`;
     }
-    
+
     sql += ` FROM ${this.tableName}`;
-    
+
     if (whereConditions.length > 0) {
       sql += ` WHERE ${whereConditions.join(" AND ")}`;
     }
@@ -569,11 +569,11 @@ export class SQLiteModel {
         return [row];
       }
       // Return default empty result
-      return selectFields.length > 0 
+      return selectFields.length > 0
         ? [Object.fromEntries(selectFields.map(f => {
-            const match = f.match(/as (\w+)/);
-            return [match ? match[1] : 'total', 0];
-          }))]
+          const match = f.match(/as (\w+)/);
+          return [match ? match[1] : 'total', 0];
+        }))]
         : [{ total: 0 }];
     }
   }

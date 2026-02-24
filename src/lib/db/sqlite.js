@@ -42,7 +42,9 @@ function initializeSchema(db) {
       sku TEXT NOT NULL UNIQUE,
       unit TEXT DEFAULT 'pcs',
       price REAL NOT NULL DEFAULT 0,
+      buyPrice REAL NOT NULL DEFAULT 0,
       quantity REAL DEFAULT 0,
+      totalBought REAL DEFAULT 0,
       totalSold REAL DEFAULT 0,
       totalRevenue REAL DEFAULT 0,
       isActive INTEGER DEFAULT 1,
@@ -222,6 +224,18 @@ function initializeSchema(db) {
         db.exec("ALTER TABLE daily_sales_summaries RENAME COLUMN staffId TO salemanId");
       }
     }
+    // 6. Add buyPrice and totalBought to products table
+    try {
+      const productCols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name);
+      if (!productCols.includes("buyPrice")) {
+        db.exec("ALTER TABLE products ADD COLUMN buyPrice REAL NOT NULL DEFAULT 0");
+      }
+      if (!productCols.includes("totalBought")) {
+        db.exec("ALTER TABLE products ADD COLUMN totalBought REAL DEFAULT 0");
+      }
+    } catch (e) {
+      console.error("Migration error (products buyPrice):", e);
+    }
   } catch (e) {
     console.error("Migration error (staff to saleman):", e);
   }
@@ -318,6 +332,74 @@ function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_returns_saleId ON returns(saleId);
     CREATE INDEX IF NOT EXISTS idx_returns_productId ON returns(productId);
     CREATE INDEX IF NOT EXISTS idx_returns_deleted ON returns(deletedAt);
+  `);
+
+  // Expenses table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT,
+      category TEXT NOT NULL,
+      description TEXT,
+      amount REAL NOT NULL DEFAULT 0,
+      date INTEGER NOT NULL,
+      salemanId INTEGER,
+      isActive INTEGER DEFAULT 1,
+      deletedAt INTEGER,
+      createdAt INTEGER,
+      updatedAt INTEGER,
+      FOREIGN KEY (salemanId) REFERENCES saleman(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_expenses_userId ON expenses(userId);
+    CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+    CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+    CREATE INDEX IF NOT EXISTS idx_expenses_deleted ON expenses(deletedAt);
+  `);
+
+  // Product Purchases table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS product_purchases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT,
+      productId INTEGER NOT NULL,
+      quantity REAL NOT NULL DEFAULT 0,
+      buyPrice REAL NOT NULL DEFAULT 0,
+      totalAmount REAL NOT NULL DEFAULT 0,
+      date INTEGER NOT NULL,
+      supplier TEXT,
+      isActive INTEGER DEFAULT 1,
+      deletedAt INTEGER,
+      createdAt INTEGER,
+      updatedAt INTEGER,
+      FOREIGN KEY (productId) REFERENCES products(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_purchases_userId ON product_purchases(userId);
+    CREATE INDEX IF NOT EXISTS idx_purchases_productId ON product_purchases(productId);
+    CREATE INDEX IF NOT EXISTS idx_purchases_date ON product_purchases(date);
+    CREATE INDEX IF NOT EXISTS idx_purchases_deleted ON product_purchases(deletedAt);
+  `);
+
+  // Saleman Payments table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS saleman_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT,
+      salemanId INTEGER NOT NULL,
+      amount REAL NOT NULL DEFAULT 0,
+      date INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      month TEXT NOT NULL,
+      description TEXT,
+      isActive INTEGER DEFAULT 1,
+      deletedAt INTEGER,
+      createdAt INTEGER,
+      updatedAt INTEGER,
+      FOREIGN KEY (salemanId) REFERENCES saleman(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_saleman_payments_userId ON saleman_payments(userId);
+    CREATE INDEX IF NOT EXISTS idx_saleman_payments_salemanId ON saleman_payments(salemanId);
+    CREATE INDEX IF NOT EXISTS idx_saleman_payments_date ON saleman_payments(date);
+    CREATE INDEX IF NOT EXISTS idx_saleman_payments_deleted ON saleman_payments(deletedAt);
   `);
 }
 

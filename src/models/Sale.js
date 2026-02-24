@@ -11,6 +11,7 @@ const SaleItemSchema = new mongoose.Schema(
       required: true,
     },
     quantity: { type: Number, required: true, min: 0 },
+    buyPrice: { type: Number, required: true, default: 0, min: 0 },
     price: { type: Number, required: true, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
     lineTotal: { type: Number, required: true, min: 0 },

@@ -12,6 +12,7 @@ const productSchema = z.object({
   name: z.string().min(1),
   sku: z.string().min(1),
   unit: z.enum(UNITS),
+  buyPrice: z.coerce.number().nonnegative().default(0),
   price: z.coerce.number().nonnegative(),
   quantity: z.coerce.number().nonnegative().default(0),
 });
@@ -22,14 +23,15 @@ export async function createProduct(formData) {
     await connectToDatabase();
 
     const quantityInput = formData.get("quantity");
-    const quantityValue = quantityInput !== null && quantityInput !== undefined && quantityInput !== "" 
-      ? Number(quantityInput) 
+    const quantityValue = quantityInput !== null && quantityInput !== undefined && quantityInput !== ""
+      ? Number(quantityInput)
       : 0;
 
     const parsed = productSchema.safeParse({
       name: formData.get("name")?.trim(),
       sku: formData.get("sku")?.trim(),
       unit: formData.get("unit") || "pcs",
+      buyPrice: formData.get("buyPrice") || 0,
       price: formData.get("price"),
       quantity: quantityValue,
     });
@@ -45,8 +47,10 @@ export async function createProduct(formData) {
       name: data.name,
       sku: data.sku,
       unit: data.unit,
+      buyPrice: data.buyPrice,
       price: data.price,
       quantity: data.quantity ?? 0,
+      totalBought: data.quantity ?? 0,
     };
     await Product.create(isMongoDB() ? { userId, ...productData } : productData);
 
@@ -72,6 +76,7 @@ export async function updateProduct(formData) {
     const name = formData.get("name")?.trim();
     const sku = formData.get("sku")?.trim();
     const unit = formData.get("unit");
+    const buyPrice = formData.get("buyPrice");
     const price = formData.get("price");
     const quantity = formData.get("quantity");
 
@@ -87,10 +92,13 @@ export async function updateProduct(formData) {
     if (unit) {
       updateData.unit = unit;
     }
+    if (buyPrice !== null && buyPrice !== undefined && buyPrice !== "") {
+      updateData.buyPrice = Number(buyPrice);
+    }
     if (price !== null && price !== undefined && price !== "") {
       updateData.price = Number(price);
     }
-    
+
     // Quantity handling - always include if provided (even if 0)
     if (quantity !== null && quantity !== undefined && quantity !== "") {
       const qtyNum = Number(quantity);

@@ -8,3 +8,6 @@ export { Sale } from "./Sale.js";
 export { DailySalesSummary } from "./DailySalesSummary.js";
 export { CreditPayment } from "./CreditPayment.js";
 export { ReturnModel } from "./Return.js";
+export { Expense } from "./Expense.js";
+export { Purchase } from "./Purchase.js";
+export { SalemanPayment } from "./SalemanPayment.js";

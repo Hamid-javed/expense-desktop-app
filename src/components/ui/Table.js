@@ -2,10 +2,10 @@
 
 import clsx from "clsx";
 
-export function Table({ children, className }) {
+export function Table({ children, className, containerClassName }) {
   return (
-    <div className={clsx("overflow-x-auto rounded-lg border", className)}>
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
+    <div className={clsx("overflow-x-auto rounded-lg border", containerClassName)}>
+      <table className={clsx("min-w-full divide-y divide-slate-200 text-sm", className)}>
         {children}
       </table>
     </div>
@@ -14,7 +14,7 @@ export function Table({ children, className }) {
 
 export function THead({ children }) {
   return (
-    <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <thead className="sticky top-0 z-10 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-sm">
       {children}
     </thead>
   );

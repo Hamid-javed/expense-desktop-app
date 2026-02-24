@@ -119,13 +119,17 @@ export async function createSale(formData) {
       })
     ).lean();
 
-    const itemsWithTotals = data.items.map((it) => ({
-      productId: it.productId,
-      quantity: it.quantity,
-      price: it.price,
-      discount: it.discount,
-      lineTotal: it.quantity * (it.price - it.discount),
-    }));
+    const itemsWithTotals = data.items.map((it) => {
+      const product = productMap.get(it.productId);
+      return {
+        productId: it.productId,
+        quantity: it.quantity,
+        buyPrice: product?.buyPrice || 0, // Record purchase price at time of sale
+        price: it.price,
+        discount: it.discount,
+        lineTotal: it.quantity * (it.price - it.discount),
+      };
+    });
 
     const newTotalDiscount = itemsWithTotals.reduce(
       (sum, it) => sum + (it.quantity * it.discount),

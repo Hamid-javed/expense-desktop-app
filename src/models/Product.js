@@ -9,10 +9,12 @@ const ProductSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     sku: { type: String, required: true, trim: true },
     unit: { type: String, enum: UNITS, default: "pcs" },
+    buyPrice: { type: Number, required: true, default: 0, min: 0 },
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, default: 0, min: 0 }, // Current stock on hand
     isActive: { type: Boolean, default: true },
     // Aggregated fields (denormalized for fast dashboard/reporting)
+    totalBought: { type: Number, default: 0 },
     totalSold: { type: Number, default: 0 },
     totalRevenue: { type: Number, default: 0 },
     deletedAt: { type: Date, default: null },

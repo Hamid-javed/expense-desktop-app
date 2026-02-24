@@ -7,6 +7,7 @@ import clsx from "clsx";
 
 const baseNavItems = [
   { href: "/", label: "Dashboard" },
+  { href: "/expenses", label: "Expenses" },
   { href: "/products", label: "Products" },
   { href: "/saleman", label: "Saleman" },
   { href: "/shops", label: "Shops" },

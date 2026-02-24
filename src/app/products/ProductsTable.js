@@ -10,6 +10,15 @@ import { UNITS } from "../../lib/config";
 export function ProductsTable({ products, createProduct, updateProduct, toggleProductActive }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredProducts = products.filter((p) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(query) ||
+      p.sku.toLowerCase().includes(query)
+    );
+  });
 
   async function handleUpdate(formData, productId) {
     const result = await updateProduct(formData);
@@ -56,7 +65,17 @@ export function ProductsTable({ products, createProduct, updateProduct, togglePr
           </select>
         </label>
         <Input
-          label="Price / Unit"
+          label="Purchase Price"
+          name="buyPrice"
+          type="number"
+          step="0.01"
+          min="0"
+          required
+          className="w-32"
+          placeholder="0.00"
+        />
+        <Input
+          label="Sale Price"
           name="price"
           type="number"
           step="0.01"
@@ -80,13 +99,29 @@ export function ProductsTable({ products, createProduct, updateProduct, togglePr
         </div>
       </form>
 
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          placeholder="Search product by name or SKU..."
+          className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
       <Table>
         <THead>
           <TR>
             <TH>Name</TH>
             <TH>SKU</TH>
             <TH>Unit</TH>
-            <TH className="text-right">Price</TH>
+            <TH className="text-right">Buy Price</TH>
+            <TH className="text-right">Sale Price</TH>
             <TH className="text-right">Quantity</TH>
             <TH className="text-right">Total Sold</TH>
             <TH className="text-right">Revenue</TH>
@@ -95,7 +130,7 @@ export function ProductsTable({ products, createProduct, updateProduct, togglePr
           </TR>
         </THead>
         <TBody>
-          {products.map((p) => {
+          {filteredProducts.map((p) => {
             const isEditing = editingId === p._id;
             const formId = `edit-form-${p._id}`;
             return (
@@ -147,6 +182,22 @@ export function ProductsTable({ products, createProduct, updateProduct, togglePr
                     </select>
                   ) : (
                     <span className="text-slate-700">{p.unit}</span>
+                  )}
+                </TD>
+                <TD className="text-right">
+                  {isEditing ? (
+                    <Input
+                      form={formId}
+                      name="buyPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      defaultValue={p.buyPrice}
+                      className="w-24 text-right"
+                      required
+                    />
+                  ) : (
+                    <span>{Number(p.buyPrice || 0).toFixed(2)}</span>
                   )}
                 </TD>
                 <TD className="text-right">

@@ -64,6 +64,17 @@ export function getStartOfTodayPK() {
 }
 
 /**
+ * Get start of current week (Monday) in PK timezone
+ */
+export function getStartOfWeekPK() {
+  const now = new Date();
+  const diff = now.getDay() === 0 ? 6 : now.getDay() - 1; // Adjust for Monday start
+  const monday = new Date(now.setDate(now.getDate() - diff));
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+/**
  * Get start of current month in PK timezone
  */
 export function getStartOfMonthPK() {
