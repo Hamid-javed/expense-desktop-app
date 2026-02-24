@@ -110,6 +110,7 @@ function startNextServerDev() {
     shell: true,
     env: { ...process.env, ...loadEnv(), PORT: String(PORT) },
     stdio: 'inherit',
+    windowsHide: true,
   });
   nextProcess.on('error', (err) => {
     console.error('Failed to start Next server:', err);
@@ -145,6 +146,7 @@ function startNextServerPackaged() {
       ELECTRON_USER_DATA: app.getPath('userData'),
     },
     stdio: 'inherit',
+    windowsHide: true,
   });
   nextProcess.on('error', (err) => {
     console.error('Failed to start Next server:', err);
