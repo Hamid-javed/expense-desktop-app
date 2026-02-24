@@ -1,5 +1,5 @@
 export { Product } from "./Product.js";
-export { Staff } from "./Staff.js";
+export { Saleman } from "./Saleman.js";
 export { Shop } from "./Shop.js";
 export { RouteModel } from "./Route.js";
 export { User } from "./User.js";

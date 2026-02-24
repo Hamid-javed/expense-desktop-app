@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { connectToDatabase, isMongoDB } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
-import { Staff } from "../../models/Staff";
+import { Saleman as SalemanModel } from "../../models/Saleman";
 import { RouteModel } from "../../models/Route";
 import { z } from "zod";
 
@@ -18,7 +18,7 @@ function getFormValue(formData, key) {
   return null;
 }
 
-const staffUpdateSchema = z.object({
+const salemanUpdateSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).optional(),
   phone: z.string().optional(),
@@ -26,7 +26,7 @@ const staffUpdateSchema = z.object({
   routeId: z.string().optional(),
 });
 
-export async function createStaff(formData) {
+export async function createSaleman(formData) {
   try {
     const userId = await requireUserId();
     await connectToDatabase();
@@ -41,33 +41,33 @@ export async function createStaff(formData) {
     }
 
     // simple 6-digit id; improve later to avoid collisions
-    const staffId = String(Math.floor(100000 + Math.random() * 900000));
+    const salemanId = String(Math.floor(100000 + Math.random() * 900000));
 
-    const staffData = {
+    const salemanData = {
       name,
       phone: phone || undefined,
       cnic: cnic || undefined,
       routeId: routeId || undefined,
-      staffId,
+      salemanId,
     };
-    const staff = await Staff.create(isMongoDB() ? { userId, ...staffData } : staffData);
+    const saleman = await SalemanModel.create(isMongoDB() ? { userId, ...salemanData } : salemanData);
 
-    // If a route was selected during creation, keep route <-> staff in sync
+    // If a route was selected during creation, keep route <-> saleman in sync
     if (routeId) {
-      const routeFilter = withUserId(userId, { assignedStaff: staff._id, _id: { $ne: routeId } });
-      await RouteModel.updateMany(routeFilter, { $unset: { assignedStaff: "" } });
+      const routeFilter = withUserId(userId, { assignedSaleman: saleman._id, _id: { $ne: routeId } });
+      await RouteModel.updateMany(routeFilter, { $unset: { assignedSaleman: "" } });
 
       const route = await RouteModel.findOne(withUserId(userId, { _id: routeId })).lean();
-        if (route) {
-          const previousStaffId = route.assignedStaff?.toString();
-          const routeIdValue = route._id || route.id;
-          await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), {
-            assignedStaff: staff._id,
-          });
+      if (route) {
+        const previousSalemanId = route.assignedSaleman?.toString();
+        const routeIdValue = route._id || route.id;
+        await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), {
+          assignedSaleman: saleman._id,
+        });
 
-        // If some other staff previously owned this route, clear their routeId
-        if (previousStaffId && previousStaffId !== staff._id.toString()) {
-          await Staff.findOneAndUpdate(withUserId(userId, { _id: previousStaffId }), {
+        // If some other saleman previously owned this route, clear their routeId
+        if (previousSalemanId && previousSalemanId !== saleman._id.toString()) {
+          await SalemanModel.findOneAndUpdate(withUserId(userId, { _id: previousSalemanId }), {
             $unset: { routeId: "" },
           });
         }
@@ -76,15 +76,15 @@ export async function createStaff(formData) {
       revalidatePath("/routes");
     }
 
-    revalidatePath("/staff");
+    revalidatePath("/saleman");
     return { success: true };
   } catch (error) {
-    console.error("Error creating staff:", error);
-    return { error: error.message || "Failed to create staff" };
+    console.error("Error creating saleman:", error);
+    return { error: error.message || "Failed to create saleman" };
   }
 }
 
-export async function updateStaff(formData) {
+export async function updateSaleman(formData) {
   try {
     const userId = await requireUserId();
     await connectToDatabase();
@@ -97,11 +97,11 @@ export async function updateStaff(formData) {
       routeId: getFormValue(formData, "routeId")?.toString().trim() || "",
     };
 
-    const validated = staffUpdateSchema.parse(rawData);
+    const validated = salemanUpdateSchema.parse(rawData);
 
-    const staff = await Staff.findOne(withUserId(userId, { _id: validated.id }));
-    if (!staff || staff.deletedAt) {
-      return { error: "Staff not found" };
+    const saleman = await SalemanModel.findOne(withUserId(userId, { _id: validated.id }));
+    if (!saleman || saleman.deletedAt) {
+      return { error: "Saleman not found" };
     }
 
     const updateData = {};
@@ -111,49 +111,49 @@ export async function updateStaff(formData) {
     if (validated.routeId !== undefined) updateData.routeId = validated.routeId || undefined;
 
     const newRouteId = validated.routeId ? validated.routeId : null;
-    const oldRouteId = staff.routeId?.toString() || null;
+    const oldRouteId = saleman.routeId?.toString() || null;
     const routeChanged = validated.routeId !== undefined && (newRouteId || "") !== (oldRouteId || "");
 
-    await Staff.findOneAndUpdate(withUserId(userId, { _id: validated.id }), updateData);
+    await SalemanModel.findOneAndUpdate(withUserId(userId, { _id: validated.id }), updateData);
 
     // Sync route assignment when routeId changes
     if (routeChanged) {
       if (oldRouteId) {
-        await RouteModel.findOneAndUpdate(withUserId(userId, { _id: oldRouteId }), { $unset: { assignedStaff: "" } });
+        await RouteModel.findOneAndUpdate(withUserId(userId, { _id: oldRouteId }), { $unset: { assignedSaleman: "" } });
       }
       if (newRouteId) {
         await RouteModel.updateMany(
-          withUserId(userId, { assignedStaff: staff._id, _id: { $ne: newRouteId } }),
-          { $unset: { assignedStaff: "" } }
+          withUserId(userId, { assignedSaleman: saleman._id, _id: { $ne: newRouteId } }),
+          { $unset: { assignedSaleman: "" } }
         );
         const route = await RouteModel.findOne(withUserId(userId, { _id: newRouteId })).lean();
         if (route) {
-          const previousStaffId = route.assignedStaff?.toString();
+          const previousSalemanId = route.assignedSaleman?.toString();
           const routeIdValue = route._id || route.id;
           await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), {
-            assignedStaff: staff._id,
+            assignedSaleman: saleman._id,
           });
-          if (previousStaffId && previousStaffId !== staff._id.toString()) {
-            await Staff.findOneAndUpdate(withUserId(userId, { _id: previousStaffId }), { $unset: { routeId: "" } });
+          if (previousSalemanId && previousSalemanId !== saleman._id.toString()) {
+            await SalemanModel.findOneAndUpdate(withUserId(userId, { _id: previousSalemanId }), { $unset: { routeId: "" } });
           }
         }
       }
       revalidatePath("/routes");
     }
 
-    revalidatePath("/staff");
+    revalidatePath("/saleman");
     return { success: true };
   } catch (error) {
-    console.error("Error updating staff:", error);
+    console.error("Error updating saleman:", error);
     return {
       error: error instanceof z.ZodError
         ? error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")
-        : error.message || "Failed to update staff",
+        : error.message || "Failed to update saleman",
     };
   }
 }
 
-export async function toggleStaffActive(formData) {
+export async function toggleSalemanActive(formData) {
   try {
     const userId = await requireUserId();
     await connectToDatabase();
@@ -162,20 +162,20 @@ export async function toggleStaffActive(formData) {
       return { error: "Missing id" };
     }
 
-    const staff = await Staff.findOne(withUserId(userId, { _id: id })).lean();
-    if (!staff) {
-      return { error: "Staff not found" };
+    const saleman = await SalemanModel.findOne(withUserId(userId, { _id: id })).lean();
+    if (!saleman) {
+      return { error: "Saleman not found" };
     }
 
-    const staffIdValue = staff._id || staff.id;
-    await Staff.findOneAndUpdate(withUserId(userId, { _id: staffIdValue }), {
-      isActive: !staff.isActive,
+    const salemanIdValue = saleman._id || saleman.id;
+    await SalemanModel.findOneAndUpdate(withUserId(userId, { _id: salemanIdValue }), {
+      isActive: !saleman.isActive,
     });
 
-    revalidatePath("/staff");
+    revalidatePath("/saleman");
     return { success: true };
   } catch (error) {
-    console.error("Error toggling staff active:", error);
-    return { error: error.message || "Failed to update staff status" };
+    console.error("Error toggling saleman active:", error);
+    return { error: error.message || "Failed to update saleman status" };
   }
 }

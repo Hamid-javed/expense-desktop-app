@@ -8,9 +8,9 @@ import { RouteAssignmentForm } from "./RouteAssignmentForm";
 
 export function RouteRow({
   route,
-  assignedStaff,
-  staff,
-  assignStaffToRoute,
+  assignedSaleman,
+  saleman,
+  assignSalemanToRoute,
   updateRoute,
   deleteRoute,
 }) {
@@ -56,7 +56,7 @@ export function RouteRow({
   }
 
   async function handleDelete() {
-    if (!confirm(`Are you sure you want to delete route "${route.name}"? This will unassign any staff from this route.`)) {
+    if (!confirm(`Are you sure you want to delete route "${route.name}"? This will unassign any saleman from this route.`)) {
       return;
     }
 
@@ -139,9 +139,9 @@ export function RouteRow({
       <TD>
         <RouteAssignmentForm
           routeId={route._id}
-          assignedStaffId={assignedStaff?._id}
-          staff={staff}
-          assignStaffToRoute={assignStaffToRoute}
+          assignedSalemanId={assignedSaleman?._id}
+          saleman={saleman}
+          assignSalemanToRoute={assignSalemanToRoute}
         />
       </TD>
       <TD>

@@ -34,9 +34,9 @@ class DailySalesSummaryModel extends SQLiteModel {
       sql += ` AND id = ?`;
       params.push(query._id);
     }
-    if (query.staffId) {
-      sql += ` AND staffId = ?`;
-      params.push(query.staffId);
+    if (query.salemanId) {
+      sql += ` AND salemanId = ?`;
+      params.push(query.salemanId);
     }
     if (query.date) {
       if (query.date.$gte && query.date.$lte) {
@@ -64,9 +64,9 @@ class DailySalesSummaryModel extends SQLiteModel {
       sql += ` AND id = ?`;
       params.push(query.id);
     }
-    if (query.staffId) {
-      sql += ` AND staffId = ?`;
-      params.push(query.staffId);
+    if (query.salemanId) {
+      sql += ` AND salemanId = ?`;
+      params.push(query.salemanId);
     }
     if (query.date) {
       const dateTime = query.date instanceof Date ? query.date.getTime() : query.date;

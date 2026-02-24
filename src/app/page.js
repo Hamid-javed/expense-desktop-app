@@ -4,7 +4,7 @@ import { requireUserId } from "../lib/auth";
 import { withUserId, withUserIdForAggregate } from "../lib/tenant";
 import { Sale } from "../models/Sale";
 import "../models/Shop";
-import "../models/Staff";
+import "../models/Saleman";
 import Link from "next/link";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
@@ -121,7 +121,7 @@ export default async function DashboardPage({ searchParams }) {
         })
     )
       .populate("shopId", "name")
-      .populate("staffId", "name")
+      .populate("salemanId", "name")
       .sort({ date: -1 })
       .lean(),
   ]);
@@ -337,7 +337,7 @@ export default async function DashboardPage({ searchParams }) {
                   <TH>Invoice #</TH>
                   <TH>Date</TH>
                   <TH>Shop</TH>
-                  <TH>Staff</TH>
+                  <TH>Saleman</TH>
                   <TH className="text-right">Amount</TH>
                   <TH className="text-right">Cash</TH>
                   <TH className="text-right">Credit</TH>
@@ -364,7 +364,7 @@ export default async function DashboardPage({ searchParams }) {
                         })}
                       </TD>
                       <TD>{sale.shopId?.name || "-"}</TD>
-                      <TD>{sale.staffId?.name || "-"}</TD>
+                      <TD>{sale.salemanId?.name || "-"}</TD>
                       <TD className="text-right font-medium">
                         {formatAmount(sale.totalAmount)}
                       </TD>

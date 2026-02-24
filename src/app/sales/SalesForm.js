@@ -5,7 +5,7 @@ import { Table, THead, TBody, TR, TH, TD } from "../../components/ui/Table";
 import { Button } from "../../components/ui/Button";
 import { PAYMENT_TYPES } from "../../lib/config";
 
-export function SalesForm({ staff, shops, products, orderTakers = [], createSale }) {
+export function SalesForm({ saleman, shops, products, orderTakers = [], createSale }) {
   const [rows, setRows] = useState([
     { productId: "", quantity: "", price: "", discount: "" },
   ]);
@@ -114,14 +114,14 @@ export function SalesForm({ staff, shops, products, orderTakers = [], createSale
       )}
       <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 md:grid-cols-4 md:text-sm">
         <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
-          <span>Staff</span>
+          <span>Saleman</span>
           <select
-            name="staffId"
+            name="salemanId"
             required
             className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
           >
-            <option value="">Select staff</option>
-            {staff.map((s) => (
+            <option value="">Select saleman</option>
+            {saleman.map((s) => (
               <option key={s._id} value={s._id}>
                 {s.name}
               </option>

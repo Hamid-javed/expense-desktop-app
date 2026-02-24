@@ -4,7 +4,7 @@ import { requireUserId } from "../../../../../lib/auth";
 import { withUserId } from "../../../../../lib/tenant";
 import { Sale } from "../../../../../models/Sale";
 import { Shop } from "../../../../../models/Shop";
-import { Staff } from "../../../../../models/Staff";
+import { Saleman } from "../../../../../models/Saleman";
 import { RouteModel } from "../../../../../models/Route";
 import { OrderTaker } from "../../../../../models/OrderTaker";
 import { generateInvoicePdf, generateShopInvoicesListingPdf } from "../../../../../lib/invoice";
@@ -49,7 +49,7 @@ export async function GET(req, { params }) {
   }
 
   const sales = await Sale.find(query)
-    .populate("staffId")
+    .populate("salemanId")
     .populate("items.productId")
     .sort({ date: 1 })
     .lean();
@@ -69,7 +69,7 @@ export async function GET(req, { params }) {
     // All time (last N days): single PDF with 1 header + 1 table listing all invoices
     const days = parseInt(daysParam, 10) || 30;
     const salesWithRefs = await Sale.find(query)
-      .populate("staffId", "name staffId")
+      .populate("salemanId", "name salemanId")
       .populate("orderTakerId", "name number")
       .sort({ date: 1 })
       .lean();
@@ -81,11 +81,11 @@ export async function GET(req, { params }) {
     const mergedPdf = await PDFDocument.create();
 
     for (const sale of sales) {
-      const staff = sale.staffId
-        ? await Staff.findOne(withUserId(userId, { _id: sale.staffId._id || sale.staffId })).lean()
+      const saleman = sale.salemanId
+        ? await Saleman.findOne(withUserId(userId, { _id: sale.salemanId._id || sale.salemanId })).lean()
         : null;
-      const route = staff?.routeId
-        ? await RouteModel.findOne(withUserId(userId, { _id: staff.routeId })).lean()
+      const route = saleman?.routeId
+        ? await RouteModel.findOne(withUserId(userId, { _id: saleman.routeId })).lean()
         : null;
 
       let otName = fallbackOtName;
@@ -118,7 +118,7 @@ export async function GET(req, { params }) {
 
       const salePdfBytes = await generateInvoicePdf(populatedSale, {
         shop: shopObj,
-        staff,
+        saleman,
         route,
         otName,
         otNumber,

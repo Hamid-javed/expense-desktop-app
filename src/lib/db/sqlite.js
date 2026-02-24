@@ -59,34 +59,34 @@ function initializeSchema(db) {
     CREATE TABLE IF NOT EXISTS routes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
-      assignedStaff INTEGER,
+      assignedSaleman INTEGER,
       isActive INTEGER DEFAULT 1,
       deletedAt INTEGER,
       createdAt INTEGER,
       updatedAt INTEGER,
-      FOREIGN KEY (assignedStaff) REFERENCES staff(id)
+      FOREIGN KEY (assignedSaleman) REFERENCES saleman(id)
     );
     CREATE INDEX IF NOT EXISTS idx_routes_deleted ON routes(deletedAt);
   `);
 
-  // Staff table
+  // Saleman table
   db.exec(`
-    CREATE TABLE IF NOT EXISTS staff (
+    CREATE TABLE IF NOT EXISTS saleman (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       phone TEXT,
       cnic TEXT,
       routeId INTEGER,
-      staffId TEXT UNIQUE,
+      salemanId TEXT UNIQUE,
       isActive INTEGER DEFAULT 1,
       deletedAt INTEGER,
       createdAt INTEGER,
       updatedAt INTEGER,
       FOREIGN KEY (routeId) REFERENCES routes(id)
     );
-    CREATE INDEX IF NOT EXISTS idx_staff_staffId ON staff(staffId);
-    CREATE INDEX IF NOT EXISTS idx_staff_routeId ON staff(routeId);
-    CREATE INDEX IF NOT EXISTS idx_staff_deleted ON staff(deletedAt);
+    CREATE INDEX IF NOT EXISTS idx_saleman_salemanId ON saleman(salemanId);
+    CREATE INDEX IF NOT EXISTS idx_saleman_routeId ON saleman(routeId);
+    CREATE INDEX IF NOT EXISTS idx_saleman_deleted ON saleman(deletedAt);
   `);
 
   // Order Takers table
@@ -158,7 +158,7 @@ function initializeSchema(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       invoiceId INTEGER NOT NULL,
       date INTEGER NOT NULL,
-      staffId INTEGER,
+      salemanId INTEGER,
       shopId INTEGER,
       items TEXT NOT NULL,
       totalDiscount REAL DEFAULT 0,
@@ -171,15 +171,60 @@ function initializeSchema(db) {
       deletedAt INTEGER,
       createdAt INTEGER,
       updatedAt INTEGER,
-      FOREIGN KEY (staffId) REFERENCES staff(id),
+      FOREIGN KEY (salemanId) REFERENCES saleman(id),
       FOREIGN KEY (shopId) REFERENCES shops(id)
     );
     CREATE INDEX IF NOT EXISTS idx_sales_invoiceId ON sales(invoiceId);
     CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date);
-    CREATE INDEX IF NOT EXISTS idx_sales_staffId ON sales(staffId);
+    CREATE INDEX IF NOT EXISTS idx_sales_salemanId ON sales(salemanId);
     CREATE INDEX IF NOT EXISTS idx_sales_shopId ON sales(shopId);
     CREATE INDEX IF NOT EXISTS idx_sales_deleted ON sales(deletedAt);
   `);
+
+  // Migration: rename staff to saleman
+  try {
+    const tableList = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(t => t.name);
+
+    // 1. Rename staff table to saleman if it exists
+    if (tableList.includes("staff") && !tableList.includes("saleman")) {
+      db.exec("ALTER TABLE staff RENAME TO saleman");
+      console.log("Renamed table 'staff' to 'saleman'");
+    }
+
+    // 2. Rename columns in saleman table
+    if (tableList.includes("staff") || tableList.includes("saleman")) {
+      const salemanCols = db.prepare("PRAGMA table_info(saleman)").all().map(c => c.name);
+      if (salemanCols.includes("staffId") && !salemanCols.includes("salemanId")) {
+        db.exec("ALTER TABLE saleman RENAME COLUMN staffId TO salemanId");
+      }
+    }
+
+    // 3. Rename columns in routes table
+    if (tableList.includes("routes")) {
+      const routesCols = db.prepare("PRAGMA table_info(routes)").all().map(c => c.name);
+      if (routesCols.includes("assignedStaff") && !routesCols.includes("assignedSaleman")) {
+        db.exec("ALTER TABLE routes RENAME COLUMN assignedStaff TO assignedSaleman");
+      }
+    }
+
+    // 4. Rename columns in sales table
+    if (tableList.includes("sales")) {
+      const salesCols = db.prepare("PRAGMA table_info(sales)").all().map(c => c.name);
+      if (salesCols.includes("staffId") && !salesCols.includes("salemanId")) {
+        db.exec("ALTER TABLE sales RENAME COLUMN staffId TO salemanId");
+      }
+    }
+
+    // 5. Rename columns in daily_sales_summaries table
+    if (tableList.includes("daily_sales_summaries")) {
+      const summaryCols = db.prepare("PRAGMA table_info(daily_sales_summaries)").all().map(c => c.name);
+      if (summaryCols.includes("staffId") && !summaryCols.includes("salemanId")) {
+        db.exec("ALTER TABLE daily_sales_summaries RENAME COLUMN staffId TO salemanId");
+      }
+    }
+  } catch (e) {
+    console.error("Migration error (staff to saleman):", e);
+  }
 
   // Migrate sales table: add orderTakerId and orderTakeDate if they don't exist
   try {
@@ -200,7 +245,7 @@ function initializeSchema(db) {
 
   // Migrate all tables: add userId for multi-tenant data isolation
   const tablesWithUserId = [
-    "products", "routes", "staff", "order_takers", "shops",
+    "products", "routes", "saleman", "order_takers", "shops",
     "sales", "daily_sales_summaries", "credit_payments", "returns",
   ];
   for (const table of tablesWithUserId) {
@@ -220,7 +265,7 @@ function initializeSchema(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS daily_sales_summaries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      staffId INTEGER NOT NULL,
+      salemanId INTEGER NOT NULL,
       date INTEGER NOT NULL,
       cashSales REAL NOT NULL DEFAULT 0,
       creditSales REAL NOT NULL DEFAULT 0,
@@ -228,10 +273,10 @@ function initializeSchema(db) {
       deletedAt INTEGER,
       createdAt INTEGER,
       updatedAt INTEGER,
-      FOREIGN KEY (staffId) REFERENCES staff(id),
-      UNIQUE(staffId, date)
+      FOREIGN KEY (salemanId) REFERENCES saleman(id),
+      UNIQUE(salemanId, date)
     );
-    CREATE INDEX IF NOT EXISTS idx_daily_summaries_staffId ON daily_sales_summaries(staffId);
+    CREATE INDEX IF NOT EXISTS idx_daily_summaries_salemanId ON daily_sales_summaries(salemanId);
     CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_sales_summaries(date);
     CREATE INDEX IF NOT EXISTS idx_daily_summaries_deleted ON daily_sales_summaries(deletedAt);
   `);

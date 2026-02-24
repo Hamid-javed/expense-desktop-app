@@ -5,7 +5,7 @@ import { connectToDatabase, isMongoDB } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { RouteModel } from "../../models/Route";
-import { Staff } from "../../models/Staff";
+import { Saleman } from "../../models/Saleman";
 
 export async function createRoute(formData) {
   try {
@@ -49,7 +49,7 @@ export async function updateRoute(formData) {
     await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), { name });
 
     revalidatePath("/routes");
-    revalidatePath("/staff");
+    revalidatePath("/saleman");
     return { success: true };
   } catch (error) {
     console.error("Error updating route:", error);
@@ -72,22 +72,22 @@ export async function deleteRoute(formData) {
     }
 
     const routeIdValue = route._id || route.id;
-    const previousStaffId = route.assignedStaff?.toString();
-    
+    const previousSalemanId = route.assignedSaleman?.toString();
+
     // Soft delete: set deletedAt and isActive
     await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), {
       deletedAt: Date.now(),
       isActive: false,
-      assignedStaff: null,
+      assignedSaleman: null,
     });
 
-    // Unassign staff from this route
-    if (previousStaffId) {
-      await Staff.findOneAndUpdate(withUserId(userId, { _id: previousStaffId }), { $unset: { routeId: "" } });
+    // Unassign saleman from this route
+    if (previousSalemanId) {
+      await Saleman.findOneAndUpdate(withUserId(userId, { _id: previousSalemanId }), { $unset: { routeId: "" } });
     }
 
     revalidatePath("/routes");
-    revalidatePath("/staff");
+    revalidatePath("/saleman");
     return { success: true };
   } catch (error) {
     console.error("Error deleting route:", error);
@@ -95,12 +95,12 @@ export async function deleteRoute(formData) {
   }
 }
 
-export async function assignStaffToRoute(formData) {
+export async function assignSalemanToRoute(formData) {
   try {
     const userId = await requireUserId();
     await connectToDatabase();
     const routeId = formData.get("routeId")?.trim();
-    const staffId = formData.get("staffId")?.trim();
+    const salemanId = formData.get("salemanId")?.trim();
 
     if (!routeId) {
       return { error: "Missing routeId" };
@@ -113,27 +113,27 @@ export async function assignStaffToRoute(formData) {
 
     const routeIdValue = route._id || route.id;
 
-    // Handle unassignment (empty staffId)
-    if (!staffId) {
-      // Unassign: clear the route's assignedStaff and remove routeId from the previously assigned staff
-      const previousStaffId = route.assignedStaff?.toString();
+    // Handle unassignment (empty salemanId)
+    if (!salemanId) {
+      // Unassign: clear the route's assignedSaleman and remove routeId from the previously assigned saleman
+      const previousSalemanId = route.assignedSaleman?.toString();
       await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), {
-        assignedStaff: null,
+        assignedSaleman: null,
       });
 
-      if (previousStaffId) {
-        await Staff.findOneAndUpdate(withUserId(userId, { _id: previousStaffId }), { $unset: { routeId: "" } });
+      if (previousSalemanId) {
+        await Saleman.findOneAndUpdate(withUserId(userId, { _id: previousSalemanId }), { $unset: { routeId: "" } });
       }
 
       revalidatePath("/routes");
-      revalidatePath("/staff");
+      revalidatePath("/saleman");
       return { success: true };
     }
 
-    // Assign new staff
-    const staff = await Staff.findOne(withUserId(userId, { _id: staffId }));
-    if (!staff) {
-      return { error: "Staff not found" };
+    // Assign new saleman
+    const saleman = await Saleman.findOne(withUserId(userId, { _id: salemanId }));
+    if (!saleman) {
+      return { error: "Saleman not found" };
     }
 
     // Check if this staff is already assigned to a different route
@@ -143,27 +143,27 @@ export async function assignStaffToRoute(formData) {
 
     if (existingRoute) {
       return {
-        error: `This staff is already assigned to route "${existingRoute.name}".`,
+        error: `This saleman is already assigned to route "${existingRoute.name}".`,
       };
     }
 
-    // Unassign previous staff if any on this route
-    const previousStaffId = route.assignedStaff?.toString();
-    if (previousStaffId && previousStaffId !== staffId) {
-      await Staff.findOneAndUpdate(withUserId(userId, { _id: previousStaffId }), { $unset: { routeId: "" } });
+    // Unassign previous saleman if any on this route
+    const previousSalemanId = route.assignedSaleman?.toString();
+    if (previousSalemanId && previousSalemanId !== salemanId) {
+      await Saleman.findOneAndUpdate(withUserId(userId, { _id: previousSalemanId }), { $unset: { routeId: "" } });
     }
 
     await RouteModel.findOneAndUpdate(withUserId(userId, { _id: routeIdValue }), {
-      assignedStaff: staffId,
+      assignedSaleman: salemanId,
     });
 
-    await Staff.findOneAndUpdate(withUserId(userId, { _id: staffId }), { routeId });
+    await Saleman.findOneAndUpdate(withUserId(userId, { _id: salemanId }), { routeId });
 
     revalidatePath("/routes");
-    revalidatePath("/staff");
+    revalidatePath("/saleman");
     return { success: true };
   } catch (error) {
-    console.error("Error assigning staff to route:", error);
-    return { error: error.message || "Failed to assign staff to route" };
+    console.error("Error assigning saleman to route:", error);
+    return { error: error.message || "Failed to assign saleman to route" };
   }
 }

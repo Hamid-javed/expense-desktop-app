@@ -19,10 +19,10 @@ class RouteModelClass extends SQLiteModel {
       sql += ` AND id = ?`;
       params.push(query._id);
     }
-    
-    if (query.assignedStaff) {
-      sql += ` AND assignedStaff = ?`;
-      params.push(query.assignedStaff);
+
+    if (query.assignedSaleman) {
+      sql += ` AND assignedSaleman = ?`;
+      params.push(query.assignedSaleman);
     }
     if (query.name) {
       sql += ` AND name = ?`;

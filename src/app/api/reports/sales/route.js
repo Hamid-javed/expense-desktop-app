@@ -4,7 +4,7 @@ import { requireUserId } from "../../../../lib/auth";
 import { withUserId } from "../../../../lib/tenant";
 import { Sale } from "../../../../models/Sale";
 import { Shop } from "../../../../models/Shop"; // Register Shop for Sale.populate("shopId")
-import { Staff } from "../../../../models/Staff"; // Register Staff for Sale.populate("staffId")
+import { Saleman } from "../../../../models/Saleman"; // Register Saleman for Sale.populate("salemanId")
 import {
   getStartOfDayPK,
   getEndOfDayPK,
@@ -50,7 +50,7 @@ export async function GET(req) {
     })
   )
     .populate("shopId", "name")
-    .populate("staffId", "name")
+    .populate("salemanId", "name")
     .sort({ date: -1 })
     .lean();
 
@@ -59,7 +59,7 @@ export async function GET(req) {
   }
 
   const rows = [
-    ["Invoice #", "Date", "Shop", "Staff", "Amount", "Cash", "Credit", "Status"],
+    ["Invoice #", "Date", "Shop", "Saleman", "Amount", "Cash", "Credit", "Status"],
     ...sales.map((sale) => [
       `${INVOICE_PREFIX}${sale.invoiceId}`,
       formatDatePK(sale.date, {
@@ -68,7 +68,7 @@ export async function GET(req) {
         year: "numeric",
       }),
       sale.shopId?.name || "-",
-      sale.staffId?.name || "-",
+      sale.salemanId?.name || "-",
       sale.totalAmount ?? 0,
       sale.cashCollected ?? 0,
       sale.creditRemaining ?? 0,

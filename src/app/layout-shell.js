@@ -8,7 +8,7 @@ import clsx from "clsx";
 const baseNavItems = [
   { href: "/", label: "Dashboard" },
   { href: "/products", label: "Products" },
-  { href: "/staff", label: "Staff" },
+  { href: "/saleman", label: "Saleman" },
   { href: "/shops", label: "Shops" },
   { href: "/routes", label: "Routes" },
   { href: "/order-takers", label: "Order Takers" },
@@ -27,7 +27,7 @@ export function AppShell({ children }) {
       .then((data) => {
         if (data?.user?.name) setUserName(data.user.name);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {

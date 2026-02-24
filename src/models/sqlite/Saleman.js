@@ -1,9 +1,9 @@
 import { SQLiteModel } from "./base.js";
 import { SQLiteQuery } from "./QueryWrapper.js";
 
-class StaffModel extends SQLiteModel {
+class SalemanModel extends SQLiteModel {
   constructor() {
-    super("staff");
+    super("saleman");
   }
 
   find(query = {}) {
@@ -26,14 +26,14 @@ class StaffModel extends SQLiteModel {
       sql += ` AND id = ?`;
       params.push(query._id);
     }
-    
+
     if (query.routeId) {
       sql += ` AND routeId = ?`;
       params.push(query.routeId);
     }
-    if (query.staffId) {
-      sql += ` AND staffId = ?`;
-      params.push(query.staffId);
+    if (query.salemanId) {
+      sql += ` AND salemanId = ?`;
+      params.push(query.salemanId);
     }
     if (query.isActive !== undefined) {
       sql += ` AND isActive = ?`;
@@ -57,9 +57,9 @@ class StaffModel extends SQLiteModel {
       sql += ` AND id = ?`;
       params.push(query.id);
     }
-    if (query.staffId) {
-      sql += ` AND staffId = ?`;
-      params.push(query.staffId);
+    if (query.salemanId) {
+      sql += ` AND salemanId = ?`;
+      params.push(query.salemanId);
     }
     if (query.isActive !== undefined) {
       sql += ` AND isActive = ?`;
@@ -73,4 +73,4 @@ class StaffModel extends SQLiteModel {
   }
 }
 
-export const Staff = new StaffModel();
+export const Saleman = new SalemanModel();

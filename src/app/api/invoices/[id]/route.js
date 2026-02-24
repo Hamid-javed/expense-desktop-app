@@ -4,7 +4,7 @@ import { requireUserId } from "../../../../lib/auth";
 import { withUserId } from "../../../../lib/tenant";
 import { Sale } from "../../../../models/Sale";
 import { Shop } from "../../../../models/Shop";
-import { Staff } from "../../../../models/Staff";
+import { Saleman } from "../../../../models/Saleman";
 import { RouteModel } from "../../../../models/Route";
 import { OrderTaker } from "../../../../models/OrderTaker";
 import { generateInvoicePdf } from "../../../../lib/invoice";
@@ -25,7 +25,7 @@ export async function GET(req, { params }) {
 
   const sale = await Sale.findOne(withUserId(userId, { _id: id }))
     .populate("shopId")
-    .populate("staffId");
+    .populate("salemanId");
   if (!sale) {
     return NextResponse.json({ error: "Sale not found" }, { status: 404 });
   }
@@ -33,11 +33,11 @@ export async function GET(req, { params }) {
   const shop = sale.shopId
     ? (await Shop.findOne(withUserId(userId, { _id: sale.shopId._id || sale.shopId })).lean())
     : null;
-  const staff = sale.staffId
-    ? (await Staff.findOne(withUserId(userId, { _id: sale.staffId._id || sale.staffId })).lean())
+  const saleman = sale.salemanId
+    ? (await Saleman.findOne(withUserId(userId, { _id: sale.salemanId._id || sale.salemanId })).lean())
     : null;
-  const route = staff?.routeId
-    ? await RouteModel.findOne(withUserId(userId, { _id: staff.routeId }))
+  const route = saleman?.routeId
+    ? await RouteModel.findOne(withUserId(userId, { _id: saleman.routeId }))
     : null;
 
   // Load products for human-readable names
@@ -72,7 +72,7 @@ export async function GET(req, { params }) {
 
   const bytes = await generateInvoicePdf(populatedSale, {
     shop,
-    staff,
+    saleman,
     route,
     otName,
     otNumber,

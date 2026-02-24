@@ -4,7 +4,7 @@ import { withUserId } from "../../../lib/tenant";
 import { Shop } from "../../../models/Shop";
 import { Sale } from "../../../models/Sale";
 import { Product } from "../../../models/Product";
-import { Staff } from "../../../models/Staff";
+import { Saleman } from "../../../models/Saleman";
 import { RouteModel } from "../../../models/Route";
 import "../../../models/OrderTaker";
 import { PageHeader } from "../../../components/layout/PageHeader";
@@ -75,7 +75,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
     const sale = await Sale.findOne(
       withUserId(userId, { _id: saleIdParam, shopId: id, deletedAt: null })
     )
-      .populate("staffId", "name staffId")
+      .populate("salemanId", "name salemanId")
       .populate("items.productId", "name sku unit")
       .lean();
 
@@ -103,7 +103,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
       );
     }
 
-    const staff = sale.staffId;
+    const saleman = sale.salemanId;
     const saleIdForQuery = sale._id ?? sale.id;
     const returnsList = await ReturnModel.find(withUserId(userId, { saleId: saleIdForQuery }))
       .populate("productId", "name sku")
@@ -138,9 +138,9 @@ export default async function ShopDetailPage({ params, searchParams }) {
                   <h3 className="font-semibold text-slate-900">
                     Invoice: {INVOICE_PREFIX}{sale.invoiceId}
                   </h3>
-                  {staff && (
+                  {saleman && (
                     <p className="text-xs text-slate-500">
-                      Staff: {staff.name} {staff.staffId ? `(${staff.staffId})` : ""}
+                      Saleman: {saleman.name} {saleman.salemanId ? `(${saleman.salemanId})` : ""}
                     </p>
                   )}
                 </div>
@@ -263,7 +263,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
       ? withUserId(userId, { shopId: id, deletedAt: null, date: { $gte: startOfDay, $lte: endOfDay } })
       : withUserId(userId, { shopId: id, deletedAt: null });
   const allSales = await Sale.find(saleFilter)
-    .populate("staffId", "name staffId")
+    .populate("salemanId", "name salemanId")
     .populate("orderTakerId", "name number")
     .sort({ date: -1 })
     .lean();
@@ -289,21 +289,21 @@ export default async function ShopDetailPage({ params, searchParams }) {
   const totalCredit = displaySales.reduce((sum, s) => sum + (s.creditRemaining ?? 0), 0);
 
   const route = shop.routeId
-    ? await RouteModel.findOne(withUserId(userId, { _id: shop.routeId })).populate("assignedStaff").lean()
+    ? await RouteModel.findOne(withUserId(userId, { _id: shop.routeId })).populate("assignedSaleman").lean()
     : null;
 
   const sortedDates = Object.keys(salesByDate).sort((a, b) => b.localeCompare(a));
 
-  const staffIds = [
+  const salemanIds = [
     ...new Set(
       displaySales
-        .map((s) => s.staffId?._id?.toString() || s.staffId?.toString())
+        .map((s) => s.salemanId?._id?.toString() || s.salemanId?.toString())
         .filter(Boolean)
     ),
   ];
-  const staffMembers =
-    staffIds.length > 0
-      ? await Staff.find(withUserId(userId, { _id: { $in: staffIds } })).lean()
+  const salemanMembers =
+    salemanIds.length > 0
+      ? await Saleman.find(withUserId(userId, { _id: { $in: salemanIds } })).lean()
       : [];
 
   return (
@@ -418,42 +418,42 @@ export default async function ShopDetailPage({ params, searchParams }) {
         </Card>
       </div>
 
-      {/* Staff Information */}
-      {staffMembers.length > 0 && (
+      {/* Saleman Information */}
+      {salemanMembers.length > 0 && (
         <Card>
-          <CardHeader title="Staff Members" />
+          <CardHeader title="Saleman Members" />
           <CardBody>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {staffMembers.map((staff) => {
-                const staffSales = displaySales.filter(
+              {salemanMembers.map((saleman) => {
+                const salemanSales = displaySales.filter(
                   (s) =>
-                    (s.staffId?._id?.toString() || s.staffId?.toString()) ===
-                    staff._id.toString()
+                    (s.salemanId?._id?.toString() || s.salemanId?.toString()) ===
+                    saleman._id.toString()
                 );
-                const staffTotal = staffSales.reduce(
+                const salemanTotal = salemanSales.reduce(
                   (sum, s) => sum + (s.totalAmount || 0),
                   0
                 );
                 return (
                   <div
-                    key={staff._id.toString()}
+                    key={saleman._id.toString()}
                     className="rounded-lg bg-slate-50 p-4"
                   >
-                    <div className="font-semibold text-slate-900">{staff.name}</div>
-                    {staff.staffId && (
+                    <div className="font-semibold text-slate-900">{saleman.name}</div>
+                    {saleman.salemanId && (
                       <div className="text-xs text-slate-600">
-                        ID: {staff.staffId}
+                        ID: {saleman.salemanId}
                       </div>
                     )}
                     <div className="mt-2 text-sm text-slate-700">
                       Total Sales:{" "}
-                      {staffTotal.toLocaleString(undefined, {
+                      {salemanTotal.toLocaleString(undefined, {
                         maximumFractionDigits: 2,
                       })}
                     </div>
                     <div className="mt-1 text-xs text-slate-500">
-                      {staffSales.length} invoice
-                      {staffSales.length !== 1 ? "s" : ""}
+                      {salemanSales.length} invoice
+                      {salemanSales.length !== 1 ? "s" : ""}
                     </div>
                   </div>
                 );
@@ -494,7 +494,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
                   <TH>Invoice #</TH>
                   <TH>Date</TH>
                   <TH>OT</TH>
-                  <TH>Staff</TH>
+                  <TH>Saleman</TH>
                   <TH className="text-right">Discount</TH>
                   <TH className="text-right">Amount</TH>
                   <TH className="text-right">Cash</TH>
@@ -522,9 +522,9 @@ export default async function ShopDetailPage({ params, searchParams }) {
                       {sale.orderTakerId?.number ? ` (${sale.orderTakerId.number})` : ""}
                     </TD>
                     <TD>
-                      {sale.staffId?.name || "-"}
-                      {sale.staffId?.staffId
-                        ? ` (${sale.staffId.staffId})`
+                      {sale.salemanId?.name || "-"}
+                      {sale.salemanId?.salemanId
+                        ? ` (${sale.salemanId.salemanId})`
                         : ""}
                     </TD>
                     <TD className="text-right text-red-500 text-xs">

@@ -112,9 +112,9 @@ export async function createReturn(formData) {
     revalidatePath("/shops");
     revalidatePath("/sales");
     revalidatePath("/products");
-    if (sale.staffId) {
-      const staffId = (sale.staffId?._id ?? sale.staffId)?.toString?.() ?? sale.staffId;
-      revalidatePath(`/staff/${staffId}/sales`);
+    if (sale.salemanId) {
+      const salemanId = (sale.salemanId?._id ?? sale.salemanId)?.toString?.() ?? sale.salemanId;
+      revalidatePath(`/saleman/${salemanId}/sales`);
     }
 
     return { success: true };

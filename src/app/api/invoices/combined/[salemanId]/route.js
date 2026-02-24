@@ -3,7 +3,7 @@ import { connectToDatabase } from "../../../../../lib/db";
 import { requireUserId } from "../../../../../lib/auth";
 import { withUserId } from "../../../../../lib/tenant";
 import { Sale } from "../../../../../models/Sale";
-import { Staff } from "../../../../../models/Staff";
+import { Saleman } from "../../../../../models/Saleman";
 import { RouteModel } from "../../../../../models/Route";
 import { Shop } from "../../../../../models/Shop";
 import { generateCombinedInvoicePdf } from "../../../../../lib/invoice";
@@ -17,17 +17,17 @@ export async function GET(req, { params }) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   await connectToDatabase();
-  const { staffId } = await params;
+  const { salemanId } = await params;
   const { searchParams } = new URL(req.url);
   const dateStr = searchParams.get("date");
 
-  const staff = await Staff.findOne(withUserId(userId, { _id: staffId })).lean();
-  if (!staff) {
-    return NextResponse.json({ error: "Staff not found" }, { status: 404 });
+  const saleman = await Saleman.findOne(withUserId(userId, { _id: salemanId })).lean();
+  if (!saleman) {
+    return NextResponse.json({ error: "Saleman not found" }, { status: 404 });
   }
 
-  const route = staff.routeId
-    ? await RouteModel.findOne(withUserId(userId, { _id: staff.routeId })).lean()
+  const route = saleman.routeId
+    ? await RouteModel.findOne(withUserId(userId, { _id: saleman.routeId })).lean()
     : null;
 
   if (!dateStr) {
@@ -42,7 +42,7 @@ export async function GET(req, { params }) {
 
   const sales = await Sale.find(
     withUserId(userId, {
-      staffId,
+      salemanId,
       deletedAt: null,
       date: { $gte: startOfDay, $lte: endOfDay },
     })
@@ -80,18 +80,18 @@ export async function GET(req, { params }) {
 
   if (shops.length === 0) {
     return NextResponse.json(
-      { error: "No sales found for this staff on the selected date" },
+      { error: "No sales found for this saleman on the selected date" },
       { status: 404 }
     );
   }
 
   const bytes = await generateCombinedInvoicePdf(shops, {
-    staff,
+    saleman,
     route,
     dateStr,
   });
 
-  const filename = `combined-invoice-${staff.name}-${dateStr}.pdf`;
+  const filename = `combined-invoice-${saleman.name}-${dateStr}.pdf`;
 
   return new NextResponse(bytes, {
     status: 200,

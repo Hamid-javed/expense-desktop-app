@@ -54,10 +54,10 @@ async function getReference(fieldName, id) {
   // Map field names to model imports (using dynamic imports to avoid circular deps)
   const modelMap = {
     shopId: () => import("./Shop.js").then((m) => m.Shop),
-    staffId: () => import("./Staff.js").then((m) => m.Staff),
+    salemanId: () => import("./Saleman.js").then((m) => m.Saleman),
     productId: () => import("./Product.js").then((m) => m.Product),
     routeId: () => import("./Route.js").then((m) => m.RouteModel),
-    assignedStaff: () => import("./Staff.js").then((m) => m.Staff),
+    assignedSaleman: () => import("./Saleman.js").then((m) => m.Saleman),
     orderTakerId: () => import("./OrderTaker.js").then((m) => m.OrderTaker),
   };
 

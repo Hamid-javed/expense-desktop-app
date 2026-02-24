@@ -32,21 +32,21 @@ function SubmitButton({ onCancel, formId, isSubmitting }) {
   );
 }
 
-export function StaffRow({ staff, routes, updateStaff, toggleStaffActive }) {
+export function SalemanRow({ saleman, routes, updateSaleman, toggleSalemanActive }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    name: staff.name,
-    phone: staff.phone || "",
-    cnic: staff.cnic || "",
-    routeId: staff.routeId || "",
+    name: saleman.name,
+    phone: saleman.phone || "",
+    cnic: saleman.cnic || "",
+    routeId: saleman.routeId || "",
   });
 
   async function handleUpdate(formDataPayload) {
     setIsSubmitting(true);
     try {
-      const result = await updateStaff(formDataPayload);
+      const result = await updateSaleman(formDataPayload);
       if (!result?.error) {
         setIsEditing(false);
         router.refresh();
@@ -58,47 +58,47 @@ export function StaffRow({ staff, routes, updateStaff, toggleStaffActive }) {
 
   function handleCancel() {
     setFormData({
-      name: staff.name,
-      phone: staff.phone || "",
-      cnic: staff.cnic || "",
-      routeId: staff.routeId || "",
+      name: saleman.name,
+      phone: saleman.phone || "",
+      cnic: saleman.cnic || "",
+      routeId: saleman.routeId || "",
     });
     setIsEditing(false);
   }
 
-  const route = routes.find((r) => r._id === staff.routeId);
+  const route = routes.find((r) => r._id === saleman.routeId);
 
   if (!isEditing) {
     return (
       <TR>
         <TD>
           <Link
-            href={`/staff/${staff._id}/sales`}
+            href={`/saleman/${saleman._id}/sales`}
             className="font-medium text-slate-800 hover:text-slate-900 hover:underline"
           >
-            {staff.name}
+            {saleman.name}
           </Link>
         </TD>
-        <TD className="text-slate-600">{staff.phone || "-"}</TD>
-        <TD className="text-slate-600 font-mono text-xs">{staff.cnic || "-"}</TD>
-        <TD className="font-mono text-xs text-slate-700">{staff.staffId}</TD>
+        <TD className="text-slate-600">{saleman.phone || "-"}</TD>
+        <TD className="text-slate-600 font-mono text-xs">{saleman.cnic || "-"}</TD>
+        <TD className="font-mono text-xs text-slate-700">{saleman.salemanId}</TD>
         <TD>{route?.name || "-"}</TD>
         <TD>
-          <form action={toggleStaffActive}>
-            <input type="hidden" name="id" value={staff._id} />
+          <form action={toggleSalemanActive}>
+            <input type="hidden" name="id" value={saleman._id} />
             <Button
               type="submit"
-              variant={staff.isActive ? "outline" : "ghost"}
+              variant={saleman.isActive ? "outline" : "ghost"}
               className="h-7 px-2 text-xs"
             >
-              {staff.isActive ? "Active" : "Inactive"}
+              {saleman.isActive ? "Active" : "Inactive"}
             </Button>
           </form>
         </TD>
         <TD>
           <div className="flex flex-col items-end gap-1">
             <div className="flex items-center gap-2">
-              <Link href={`/staff/${staff._id}/sales`}>
+              <Link href={`/saleman/${saleman._id}/sales`}>
                 <Button variant="outline" className="h-7 px-2 text-xs">
                   View Sales
                 </Button>
@@ -118,13 +118,13 @@ export function StaffRow({ staff, routes, updateStaff, toggleStaffActive }) {
     );
   }
 
-  const formId = `staff-form-${staff._id}`;
+  const formId = `saleman-form-${saleman._id}`;
 
   return (
     <TR>
       <TD>
         <form id={formId} action={handleUpdate}>
-          <input type="hidden" name="id" value={staff._id} />
+          <input type="hidden" name="id" value={saleman._id} />
         </form>
         <Input
           form={formId}
@@ -154,7 +154,7 @@ export function StaffRow({ staff, routes, updateStaff, toggleStaffActive }) {
           placeholder="CNIC"
         />
       </TD>
-      <TD className="font-mono text-xs text-slate-700">{staff.staffId}</TD>
+      <TD className="font-mono text-xs text-slate-700">{saleman.salemanId}</TD>
       <TD>
         <select
           form={formId}

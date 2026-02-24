@@ -1,25 +1,25 @@
 import mongoose from "mongoose";
 import { isMongoDB } from "../lib/db/index.js";
-import { Staff as SQLiteStaff } from "./sqlite/Staff.js";
+import { Saleman as SQLiteSaleman } from "./sqlite/Saleman.js";
 
-const StaffSchemaDef = new mongoose.Schema(
+const SalemanSchemaDef = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
     phone: { type: String, trim: true },
     cnic: { type: String, trim: true },
     routeId: { type: mongoose.Schema.Types.ObjectId, ref: "Route" },
-    staffId: { type: String, index: true }, // 6-digit generated, unique per user
+    salemanId: { type: String, index: true }, // 6-digit generated, unique per user
     isActive: { type: Boolean, default: true },
     deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
 
-StaffSchemaDef.index({ userId: 1, staffId: 1 }, { unique: true, sparse: true });
+SalemanSchemaDef.index({ userId: 1, salemanId: 1 }, { unique: true, sparse: true });
 
-const MongooseStaff =
-  mongoose.models.Staff || mongoose.model("Staff", StaffSchemaDef);
+const MongooseSaleman =
+  mongoose.models.Saleman || mongoose.model("Saleman", SalemanSchemaDef);
 
-export const Staff = isMongoDB() ? MongooseStaff : SQLiteStaff;
+export const Saleman = isMongoDB() ? MongooseSaleman : SQLiteSaleman;
 

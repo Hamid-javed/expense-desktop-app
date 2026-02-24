@@ -5,9 +5,9 @@ import { DailySalesSummary as SQLiteDailySalesSummary } from "./sqlite/DailySale
 const DailySalesSummarySchemaDef = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    staffId: {
+    salemanId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Staff",
+      ref: "Saleman",
       required: true,
       index: true,
     },
@@ -34,8 +34,8 @@ const DailySalesSummarySchemaDef = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Compound index to ensure one summary per staff per date
-DailySalesSummarySchemaDef.index({ staffId: 1, date: 1 }, { unique: true });
+// Compound index to ensure one saleman per date
+DailySalesSummarySchemaDef.index({ salemanId: 1, date: 1 }, { unique: true });
 
 const MongooseDailySalesSummary =
   mongoose.models.DailySalesSummary ||

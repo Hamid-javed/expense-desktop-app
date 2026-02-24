@@ -12,7 +12,7 @@ import { z } from "zod";
 import { getStartOfDayPK, getEndOfDayPK } from "../../../../lib/dateUtils";
 
 const dailySummarySchema = z.object({
-  staffId: z.string().min(1),
+  salemanId: z.string().min(1),
   date: z.string().min(1), // YYYY-MM-DD
   cashSales: z.coerce.number().min(0).default(0),
   creditSales: z.coerce.number().min(0).default(0),
@@ -24,7 +24,7 @@ export async function upsertDailySalesSummary(formData) {
     await connectToDatabase();
 
     const rawData = {
-      staffId: formData.get("staffId")?.toString().trim(),
+      salemanId: formData.get("salemanId")?.toString().trim(),
       date: formData.get("date")?.toString().trim(),
       cashSales: formData.get("cashSales")?.toString().trim() || "0",
       creditSales: formData.get("creditSales")?.toString().trim() || "0",
@@ -36,12 +36,12 @@ export async function upsertDailySalesSummary(formData) {
     const startOfDay = getStartOfDayPK(validated.date);
     const endOfDay = getEndOfDayPK(validated.date);
 
-    // Calculate total sales amount for this staff/date
+    // Calculate total sales amount for this saleman/date
     // Credit here means loans/credit given to shopkeepers, not credit sales
     // So we need to ensure cashSales + creditSales doesn't exceed total sales
     const sales = await Sale.find(
       withUserId(userId, {
-        staffId: validated.staffId,
+        salemanId: validated.salemanId,
         deletedAt: null,
         date: { $gte: startOfDay, $lte: endOfDay },
       })
@@ -71,14 +71,14 @@ export async function upsertDailySalesSummary(formData) {
     // Upsert: find or create, then update
     const summary = await DailySalesSummary.findOneAndUpdate(
       withUserId(userId, {
-        staffId: validated.staffId,
+        salemanId: validated.salemanId,
         date: startOfDay,
         deletedAt: null,
       }),
       isMongoDB()
         ? {
           userId,
-          staffId: validated.staffId,
+          salemanId: validated.salemanId,
           date: startOfDay,
           cashSales: validated.cashSales,
           creditSales: validated.creditSales,
@@ -86,7 +86,7 @@ export async function upsertDailySalesSummary(formData) {
           deletedAt: null,
         }
         : {
-          staffId: validated.staffId,
+          salemanId: validated.salemanId,
           date: startOfDay,
           cashSales: validated.cashSales,
           creditSales: validated.creditSales,
@@ -100,8 +100,8 @@ export async function upsertDailySalesSummary(formData) {
       }
     );
 
-    // Revalidate the staff sales page
-    revalidatePath(`/staff/${validated.staffId}/sales`);
+    // Revalidate the saleman sales page
+    revalidatePath(`/saleman/${validated.salemanId}/sales`);
 
     return { success: true, data: summary };
   } catch (error) {
@@ -202,7 +202,7 @@ export async function updateSaleItemQuantity(formData) {
     );
 
     // Revalidate paths
-    revalidatePath(`/staff/${sale.staffId}/sales`);
+    revalidatePath(`/saleman/${sale.salemanId}/sales`);
     revalidatePath("/sales");
     revalidatePath("/products");
 

@@ -60,9 +60,9 @@ class SaleModel extends SQLiteModel {
       sql += ` AND shopId = ?`;
       params.push(query.shopId);
     }
-    if (query.staffId) {
-      sql += ` AND staffId = ?`;
-      params.push(query.staffId);
+    if (query.salemanId) {
+      sql += ` AND salemanId = ?`;
+      params.push(query.salemanId);
     }
     if (query.orderTakerId) {
       sql += ` AND orderTakerId = ?`;
@@ -159,9 +159,9 @@ class SaleModel extends SQLiteModel {
       sql += ` AND shopId = ?`;
       params.push(query.shopId);
     }
-    if (query.staffId) {
-      sql += ` AND staffId = ?`;
-      params.push(query.staffId);
+    if (query.salemanId) {
+      sql += ` AND salemanId = ?`;
+      params.push(query.salemanId);
     }
     if (query.orderTakerId) {
       sql += ` AND orderTakerId = ?`;

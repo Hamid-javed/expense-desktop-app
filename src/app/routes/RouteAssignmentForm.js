@@ -19,13 +19,13 @@ function SubmitButton() {
   );
 }
 
-export function RouteAssignmentForm({ routeId, assignedStaffId, staff, assignStaffToRoute }) {
+export function RouteAssignmentForm({ routeId, assignedSalemanId, saleman, assignSalemanToRoute }) {
   const router = useRouter();
   const [error, setError] = useState(null);
 
   async function handleSubmit(formData) {
     setError(null);
-    const result = await assignStaffToRoute(formData);
+    const result = await assignSalemanToRoute(formData);
     if (result?.error) {
       setError(result.error);
     } else if (result?.success || !result?.error) {
@@ -42,12 +42,12 @@ export function RouteAssignmentForm({ routeId, assignedStaffId, staff, assignSta
       >
         <input type="hidden" name="routeId" value={routeId} />
         <select
-          name="staffId"
-          defaultValue={assignedStaffId || ""}
+          name="salemanId"
+          defaultValue={assignedSalemanId || ""}
           className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
         >
           <option value="">Unassigned</option>
-          {staff.map((s) => (
+          {saleman.map((s) => (
             <option key={s._id} value={s._id}>
               {s.name}
             </option>

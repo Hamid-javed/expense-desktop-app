@@ -2,7 +2,7 @@ import { connectToDatabase } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { serializeForClient } from "../../lib/serialize";
-import { Staff } from "../../models/Staff";
+import { Saleman } from "../../models/Saleman";
 import { Shop } from "../../models/Shop";
 import { Product } from "../../models/Product";
 import { OrderTaker } from "../../models/OrderTaker";
@@ -18,8 +18,8 @@ export default async function SalesPage() {
   const userId = await requireUserId();
   await connectToDatabase();
 
-  const [staff, shops, products, orderTakers] = await Promise.all([
-    Staff.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
+  const [saleman, shops, products, orderTakers] = await Promise.all([
+    Saleman.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
     Shop.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
     Product.find(withUserId(userId, { deletedAt: null })).sort({ name: 1 }).lean(),
     OrderTaker.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
@@ -28,7 +28,7 @@ export default async function SalesPage() {
   const serialisedProducts = serializeForClient(
     products.map((p) => ({ ...p, quantity: p.quantity ?? 0 }))
   );
-  const serialisedStaff = serializeForClient(staff);
+  const serialisedSaleman = serializeForClient(saleman);
   const serialisedShops = serializeForClient(shops);
   const serialisedOrderTakers = serializeForClient(orderTakers);
 
@@ -36,13 +36,13 @@ export default async function SalesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Sales / Distribution"
-        description="Daily sales entry per staff with inline product rows."
+        description="Daily sales entry per saleman with inline product rows."
       />
 
       <Card>
         <CardBody>
           <SalesForm
-            staff={serialisedStaff}
+            saleman={serialisedSaleman}
             shops={serialisedShops}
             products={serialisedProducts}
             orderTakers={serialisedOrderTakers}

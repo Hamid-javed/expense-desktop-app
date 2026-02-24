@@ -2,7 +2,7 @@ import { connectToDatabase } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { serializeForClient } from "../../lib/serialize";
-import { Staff } from "../../models/Staff";
+import { Saleman } from "../../models/Saleman";
 import { RouteModel } from "../../models/Route";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
@@ -10,32 +10,32 @@ import { Table, THead, TBody, TR, TH, TD } from "../../components/ui/Table";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import Link from "next/link";
-import { createStaff, updateStaff, toggleStaffActive } from "./actions";
-import { StaffRow } from "./StaffRow";
+import { createSaleman, updateSaleman, toggleSalemanActive } from "./actions";
+import { SalemanRow } from "./SalemanRow";
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffPage() {
+export default async function SalemanPage() {
   const userId = await requireUserId();
   await connectToDatabase();
-  const [staffRaw, routesRaw] = await Promise.all([
-    Staff.find(withUserId(userId, { deletedAt: null })).sort({ createdAt: -1 }).lean(),
+  const [salemanRaw, routesRaw] = await Promise.all([
+    Saleman.find(withUserId(userId, { deletedAt: null })).sort({ createdAt: -1 }).lean(),
     RouteModel.find(withUserId(userId, { deletedAt: null })).sort({ name: 1 }).lean(),
   ]);
 
-  const staff = serializeForClient(staffRaw);
+  const saleman = serializeForClient(salemanRaw);
   const routes = serializeForClient(routesRaw);
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Staff"
-        description="Manage sales staff, routes, and their status."
+        title="Saleman"
+        description="Manage sales saleman, routes, and their status."
       />
       <Card>
         <CardBody>
           <form
-            action={createStaff}
+            action={createSaleman}
             className="mb-4 flex flex-wrap gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-xs md:text-sm"
           >
             <Input
@@ -43,7 +43,7 @@ export default async function StaffPage() {
               name="name"
               required
               className="w-40 md:w-48"
-              placeholder="Staff name"
+              placeholder="Saleman name"
             />
             <Input
               label="Phone"
@@ -75,7 +75,7 @@ export default async function StaffPage() {
               </select>
             </label>
             <div className="flex items-end">
-              <Button type="submit">Add Staff</Button>
+              <Button type="submit">Add Saleman</Button>
             </div>
           </form>
 
@@ -85,20 +85,20 @@ export default async function StaffPage() {
                 <TH>Name</TH>
                 <TH>Phone</TH>
                 <TH>CNIC</TH>
-                <TH>Staff ID</TH>
+                <TH>Saleman ID</TH>
                 <TH>Route</TH>
                 <TH>Status</TH>
                 <TH className="text-right">Actions</TH>
               </TR>
             </THead>
             <TBody>
-              {staff.map((s) => (
-                <StaffRow
+              {saleman.map((s) => (
+                <SalemanRow
                   key={s._id}
-                  staff={s}
+                  saleman={s}
                   routes={routes}
-                  updateStaff={updateStaff}
-                  toggleStaffActive={toggleStaffActive}
+                  updateSaleman={updateSaleman}
+                  toggleSalemanActive={toggleSalemanActive}
                 />
               ))}
             </TBody>

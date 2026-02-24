@@ -1,7 +1,7 @@
 import { connectToDatabase } from "../../../../lib/db";
 import { requireUserId } from "../../../../lib/auth";
 import { withUserId } from "../../../../lib/tenant";
-import { Staff } from "../../../../models/Staff";
+import { Saleman } from "../../../../models/Saleman";
 import { Sale } from "../../../../models/Sale";
 import "../../../../models/Product"; // Register Product for Sale.populate("items.productId")
 import { DailySalesSummary } from "../../../../models/DailySalesSummary";
@@ -17,7 +17,7 @@ import { getTodayPK, getStartOfDayPK, getEndOfDayPK, getDateKeyPK, formatDatePK,
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffSalesPage({ params, searchParams }) {
+export default async function SalemanSalesPage({ params, searchParams }) {
   const userId = await requireUserId();
   await connectToDatabase();
   const { id } = await params;
@@ -32,17 +32,17 @@ export default async function StaffSalesPage({ params, searchParams }) {
   const startOfDay = getStartOfDayPK(selectedDateStr);
   const endOfDay = getEndOfDayPK(selectedDateStr);
 
-  const staff = await Staff.findOne(withUserId(userId, { _id: id })).lean();
-  if (!staff) {
+  const saleman = await Saleman.findOne(withUserId(userId, { _id: id })).lean();
+  if (!saleman) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Staff Not Found" />
+        <PageHeader title="Saleman Not Found" />
         <Card>
           <CardBody>
-            <p className="text-slate-600">The requested staff member could not be found.</p>
-            <Link href="/staff">
+            <p className="text-slate-600">The requested saleman could not be found.</p>
+            <Link href="/saleman">
               <Button variant="outline" className="mt-4">
-                Back to Staff
+                Back to Saleman
               </Button>
             </Link>
           </CardBody>
@@ -51,10 +51,10 @@ export default async function StaffSalesPage({ params, searchParams }) {
     );
   }
 
-  // Fetch sales for this staff member on the selected date
+  // Fetch sales for this saleman member on the selected date
   const sales = await Sale.find(
     withUserId(userId, {
-      staffId: id,
+      salemanId: id,
       deletedAt: null,
       date: { $gte: startOfDay, $lte: endOfDay },
     })
@@ -64,9 +64,9 @@ export default async function StaffSalesPage({ params, searchParams }) {
     .sort({ date: -1 })
     .lean();
 
-  // Fetch ALL daily summaries for this staff to calculate totals
+  // Fetch ALL daily summaries for this saleman to calculate totals
   const allDailySummaries = await DailySalesSummary.find(
-    withUserId(userId, { staffId: id, deletedAt: null })
+    withUserId(userId, { salemanId: id, deletedAt: null })
   )
     .lean();
 
@@ -91,7 +91,7 @@ export default async function StaffSalesPage({ params, searchParams }) {
   // Calculate total cash per shop for the selected date only
   const salesForSelectedDate = await Sale.find(
     withUserId(userId, {
-      staffId: id,
+      salemanId: id,
       deletedAt: null,
       date: { $gte: startOfDay, $lte: endOfDay },
     })
@@ -141,7 +141,7 @@ export default async function StaffSalesPage({ params, searchParams }) {
 
     todaySales = await Sale.find(
       withUserId(userId, {
-        staffId: id,
+        salemanId: id,
         deletedAt: null,
         date: { $gte: todayStartOfDay, $lte: todayEndOfDay },
       })
@@ -156,8 +156,8 @@ export default async function StaffSalesPage({ params, searchParams }) {
       .reduce((sum, s) => sum + (s.totalAmount || 0), 0);
   }
 
-  const route = staff.routeId
-    ? await RouteModel.findOne(withUserId(userId, { _id: staff.routeId })).lean()
+  const route = saleman.routeId
+    ? await RouteModel.findOne(withUserId(userId, { _id: saleman.routeId })).lean()
     : null;
 
   const sortedDates = Object.keys(salesByDate).sort((a, b) => b.localeCompare(a));
@@ -165,8 +165,8 @@ export default async function StaffSalesPage({ params, searchParams }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Sales: ${staff.name}`}
-        description={`Staff ID: ${staff.staffId || "N/A"} | Route: ${route?.name || "Unassigned"
+        title={`Sales: ${saleman.name}`}
+        description={`Saleman ID: ${saleman.salemanId || "N/A"} | Route: ${route?.name || "Unassigned"
           }`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -184,9 +184,9 @@ export default async function StaffSalesPage({ params, searchParams }) {
                 Filter
               </Button>
             </form>
-            <Link href="/staff">
+            <Link href="/saleman">
               <Button variant="ghost" className="h-8 px-3 text-xs">
-                ← Back to Staff
+                ← Back to Saleman
               </Button>
             </Link>
           </div>
@@ -280,7 +280,7 @@ export default async function StaffSalesPage({ params, searchParams }) {
               No sales records for {selectedDateStr}. You can still enter daily cash and credit sales totals.
             </p>
             <DailySummaryForm
-              staffId={id.toString()}
+              salemanId={id.toString()}
               date={selectedDateStr}
               cashSales={summariesByDate[selectedDateStr]?.cashSales || 0}
               creditSales={summariesByDate[selectedDateStr]?.creditSales || 0}
@@ -294,7 +294,7 @@ export default async function StaffSalesPage({ params, searchParams }) {
         <Card>
           <CardBody>
             <p className="text-center text-slate-500 py-8">
-              No sales records found for this staff member on the selected date.
+              No sales records found for this saleman on the selected date.
             </p>
           </CardBody>
         </Card>

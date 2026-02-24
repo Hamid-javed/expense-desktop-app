@@ -20,7 +20,7 @@ function formatNum(n) {
 
 export async function generateInvoicePdf(
   sale,
-  { shop, staff, route, otName, otNumber, otDate }
+  { shop, saleman, route, otName, otNumber, otDate }
 ) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]); // A4
@@ -121,9 +121,9 @@ export async function generateInvoicePdf(
     yRight -= 14;
   }
 
-  if (staff) {
-    draw("Salesman:", colRight, yRight, small, true);
-    draw(staff.name || "-", colRight + 90, yRight, small);
+  if (saleman) {
+    draw("Saleman:", colRight, yRight, small, true);
+    draw(saleman.name || "-", colRight + 90, yRight, small);
     yRight -= 14;
     draw("Invoice ID:", colRight, yRight, small, true);
     draw(`${INVOICE_PREFIX}${sale.invoiceId}`, colRight + 90, yRight, small);
@@ -260,7 +260,7 @@ export async function generateInvoicePdf(
 
 /**
  * Generate a single-page PDF listing multiple invoices for a shop.
- * One header, one table with: Invoice #, Date, OT, Staff, Amount, Cash, Credit, Status.
+ * One header, one table with: Invoice #, Date, OT, Saleman, Amount, Cash, Credit, Status.
  */
 export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLabel = "Last 30 days" }) {
   const pdfDoc = await PDFDocument.create();
@@ -328,13 +328,13 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
   draw(`Period: ${dateRangeLabel}`, margin, y, small);
   y -= 24;
 
-  // --- Table header: Invoice # | Date | OT | Staff | Amount | Cash | Credit | Status ---
+  // --- Table header: Invoice # | Date | OT | Saleman | Amount | Cash | Credit | Status ---
   const tableLeft = margin;
   const colW = [
     { w: 60, x: tableLeft },           // Invoice #
     { w: 65, x: tableLeft + 60 },      // Date
     { w: 70, x: tableLeft + 125 },     // OT
-    { w: 75, x: tableLeft + 195 },     // Staff
+    { w: 75, x: tableLeft + 195 },     // Saleman
     { w: 40, x: tableLeft + 270 },     // Disc
     { w: 50, x: tableLeft + 310 },     // Amount
     { w: 50, x: tableLeft + 360 },     // Cash
@@ -342,7 +342,7 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
     { w: 55, x: tableLeft + 460 },     // Status
   ];
 
-  const headers = ["Invoice #", "Date", "OT", "Staff", "Disc", "Amount", "Cash", "Credit", "Status"];
+  const headers = ["Invoice #", "Date", "OT", "Saleman", "Disc", "Amount", "Cash", "Credit", "Status"];
   headers.forEach((h, i) => {
     draw(h, colW[i].x, y, small, true);
   });
@@ -367,7 +367,7 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
     const invNum = `${INVOICE_PREFIX}${sale.invoiceId}`;
     const dateStr = sale.date ? formatDateDDMMYYYY(sale.date) : "-";
     const ot = sale.orderTakerId?.name || "-";
-    const staff = sale.staffId?.name || "-";
+    const saleman = sale.salemanId?.name || "-";
     const discount = sale.totalDiscount ?? 0;
     const amount = sale.totalAmount ?? 0;
     const cash = sale.cashCollected ?? 0;
@@ -382,7 +382,7 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
     draw(invNum, colW[0].x, y, small);
     draw(dateStr, colW[1].x, y, small);
     draw(ot.length > 12 ? ot.slice(0, 10) + ".." : ot, colW[2].x, y, small);
-    draw(staff.length > 12 ? staff.slice(0, 10) + ".." : staff, colW[3].x, y, small);
+    draw(saleman.length > 12 ? saleman.slice(0, 10) + ".." : saleman, colW[3].x, y, small);
     draw((discount).toFixed(2), colW[4].x, y, small);
     draw((amount).toFixed(2), colW[5].x, y, small);
     draw((cash).toFixed(2), colW[6].x, y, small);
@@ -408,7 +408,7 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
  * Generate combined invoice PDF: all shops with name, number, total amount,
  * and empty Cash/Credit columns for salesman to fill.
  */
-export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr }) {
+export async function generateCombinedInvoicePdf(shops, { saleman, route, dateStr }) {
   const pdfDoc = await PDFDocument.create();
   let page = pdfDoc.addPage([595.28, 841.89]); // A4
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -462,10 +462,10 @@ export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr 
   }
   y -= 10;
 
-  // --- TOP RIGHT: Salesman & Date ---
+  // --- TOP RIGHT: Saleman & Date ---
   let yRight = height - margin;
-  draw("Salesman:", colRight, yRight, small, true);
-  draw(staff?.name || "-", colRight + 90, yRight, small);
+  draw("Saleman:", colRight, yRight, small, true);
+  draw(saleman?.name || "-", colRight + 90, yRight, small);
   yRight -= 14;
 
   if (route) {
@@ -527,7 +527,7 @@ export async function generateCombinedInvoicePdf(shops, { staff, route, dateStr 
     draw(number, colW[1].x, y, 9);
     draw(invoiceIdDisplay, colW[2].x, y, 8);
     draw(discount.toFixed(2), colW[3].x, y, 8);
-    // Cash and Credit left empty for salesman to write
+    // Cash and Credit left empty for saleman to write
     draw(`${total.toFixed(2)}/-`, colW[6].x, y, 9);
     // Draw line just below row, then leave gap before next row
     y -= lineGap;

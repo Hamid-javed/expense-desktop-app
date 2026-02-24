@@ -21,7 +21,7 @@ function SubmitButton() {
   );
 }
 
-export function DailySummaryForm({ staffId, date, cashSales = 0, creditSales = 0 }) {
+export function DailySummaryForm({ salemanId, date, cashSales = 0, creditSales = 0 }) {
   const router = useRouter();
   const [error, setError] = useState(null);
 
@@ -38,7 +38,7 @@ export function DailySummaryForm({ staffId, date, cashSales = 0, creditSales = 0
   return (
     <form action={handleSubmit} className="flex flex-col gap-3 p-4 bg-slate-50 rounded-md border border-slate-200">
       <div className="flex items-end gap-3">
-        <input type="hidden" name="staffId" value={staffId} />
+        <input type="hidden" name="salemanId" value={salemanId} />
         <input type="hidden" name="date" value={date} />
         <Input
           label="Cash Sales"

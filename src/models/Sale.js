@@ -23,7 +23,7 @@ const SaleSchemaDef = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     invoiceId: { type: Number, required: true, index: true },
     date: { type: Date, required: true },
-    staffId: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
+    salemanId: { type: mongoose.Schema.Types.ObjectId, ref: "Saleman" },
     shopId: { type: mongoose.Schema.Types.ObjectId, ref: "Shop" },
     orderTakerId: { type: mongoose.Schema.Types.ObjectId, ref: "OrderTaker" },
     orderTakeDate: { type: Date },

@@ -13,7 +13,7 @@ import { parseDatePK } from "../../lib/dateUtils";
 
 const saleSchema = z.object({
   date: z.string(),
-  staffId: z.string().min(1),
+  salemanId: z.string().min(1),
   shopId: z.string().min(1),
   orderTakerId: z.string().min(1),
   orderTakeDate: z.string(),
@@ -66,7 +66,7 @@ export async function createSale(formData) {
 
     const parsed = saleSchema.safeParse({
       date: formData.get("date")?.trim(),
-      staffId: formData.get("staffId")?.trim(),
+      salemanId: formData.get("salemanId")?.trim(),
       shopId: formData.get("shopId")?.trim(),
       orderTakerId: formData.get("orderTakerId")?.trim(),
       orderTakeDate: formData.get("orderTakeDate")?.trim() || formData.get("date")?.trim(),
@@ -109,11 +109,11 @@ export async function createSale(formData) {
     const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
     const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 
-    // Check if a sale exists for the same shop, staff, and date
+    // Check if a sale exists for the same shop, saleman, and date
     const existingSale = await Sale.findOne(
       withUserId(userId, {
         shopId: data.shopId,
-        staffId: data.staffId,
+        salemanId: data.salemanId,
         date: { $gte: startOfDay, $lte: endOfDay },
         deletedAt: null,
       })
@@ -257,7 +257,7 @@ export async function createSale(formData) {
       const saleData = {
         invoiceId,
         date,
-        staffId: data.staffId,
+        salemanId: data.salemanId,
         shopId: data.shopId,
         orderTakerId: data.orderTakerId,
         orderTakeDate,
@@ -304,7 +304,7 @@ export async function createSale(formData) {
     revalidatePath("/");
     revalidatePath("/products");
     revalidatePath("/");
-    revalidatePath(`/staff/${data.staffId}/sales`);
+    revalidatePath(`/saleman/${data.salemanId}/sales`);
     revalidatePath(`/shops/${data.shopId}`);
 
     return { success: true, saleId: sale._id.toString(), invoiceId };

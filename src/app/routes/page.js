@@ -3,13 +3,13 @@ import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { serializeForClient } from "../../lib/serialize";
 import { RouteModel } from "../../models/Route";
-import { Staff } from "../../models/Staff";
+import { Saleman } from "../../models/Saleman";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Table, THead, TBody, TR, TH } from "../../components/ui/Table";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
-import { createRoute, assignStaffToRoute, updateRoute, deleteRoute } from "./actions";
+import { createRoute, assignSalemanToRoute, updateRoute, deleteRoute } from "./actions";
 import { RouteRow } from "./RouteRow";
 
 export const dynamic = "force-dynamic";
@@ -17,20 +17,20 @@ export const dynamic = "force-dynamic";
 export default async function RoutesPage() {
   const userId = await requireUserId();
   await connectToDatabase();
-  const [routesRaw, staffRaw, allStaffRaw] = await Promise.all([
+  const [routesRaw, salemanRaw, allSalemanRaw] = await Promise.all([
     RouteModel.find(withUserId(userId, { deletedAt: null })).sort({ name: 1 }).lean(),
-    Staff.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
-    Staff.find(withUserId(userId, { deletedAt: null })).sort({ name: 1 }).lean(),
+    Saleman.find(withUserId(userId, { deletedAt: null, isActive: true })).sort({ name: 1 }).lean(),
+    Saleman.find(withUserId(userId, { deletedAt: null })).sort({ name: 1 }).lean(),
   ]);
   const routes = serializeForClient(routesRaw);
-  const staff = serializeForClient(staffRaw);
-  const allStaff = serializeForClient(allStaffRaw);
+  const saleman = serializeForClient(salemanRaw);
+  const allSaleman = serializeForClient(allSalemanRaw);
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Routes"
-        description="Manage sales routes and assign staff."
+        description="Manage sales routes and assign saleman."
       />
       <Card>
         <CardBody>
@@ -54,20 +54,20 @@ export default async function RoutesPage() {
             <THead>
               <TR>
                 <TH>Name</TH>
-                <TH>Assigned Staff</TH>
+                <TH>Assigned Saleman</TH>
                 <TH className="text-right">Actions</TH>
               </TR>
             </THead>
             <TBody>
               {routes.map((r) => {
-                const assigned = allStaff.find((s) => s._id === r.assignedStaff);
+                const assigned = allSaleman.find((s) => s._id === r.assignedSaleman);
                 return (
                   <RouteRow
                     key={r._id}
                     route={r}
-                    assignedStaff={assigned}
-                    staff={staff}
-                    assignStaffToRoute={assignStaffToRoute}
+                    assignedSaleman={assigned}
+                    saleman={saleman}
+                    assignSalemanToRoute={assignSalemanToRoute}
                     updateRoute={updateRoute}
                     deleteRoute={deleteRoute}
                   />
