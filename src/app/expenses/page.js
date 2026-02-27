@@ -17,12 +17,15 @@ import { ExpenseList } from "./ExpenseList";
 import { ProductProfitTable } from "./ProductProfitTable";
 import { DownloadReportButton } from "./DownloadReportButton";
 import {
-    getStartOfTodayPK,
     getStartOfWeekPK,
     getStartOfMonthPK,
     getEndOfDayPK,
     getTodayPK,
+    getStartOfDayPK,
+    getStartOfMonthFor,
+    getEndOfMonthFor
 } from "../../lib/dateUtils";
+import { accumulateSalesMetrics, computeLineMetrics } from "../../lib/salesMetrics";
 import {
     createExpense,
     recordPurchase,
@@ -30,6 +33,7 @@ import {
 } from "./actions";
 import Link from "next/link";
 import { Button } from "../../components/ui/Button";
+import { DateFilter } from "./DateFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -37,17 +41,32 @@ export default async function ExpensesPage({ searchParams }) {
     const userId = await requireUserId();
     await connectToDatabase();
 
-    const period = (await searchParams)?.period || "daily";
+    const params = await searchParams;
+    const period = params.period || "daily";
+    const dateQuery = params.date || getTodayPK();
+    const monthQuery = params.month || getTodayPK().substring(0, 7); // YYYY-MM
+    const yearQuery = params.year || String(new Date().getFullYear());
+
     let startDate;
-    const endDate = new Date(); // Current time
+    let endDate = new Date(); // Default end is now
 
     if (period === "daily") {
-        startDate = getStartOfTodayPK();
+        startDate = getStartOfDayPK(dateQuery);
+        endDate = getEndOfDayPK(dateQuery);
     } else if (period === "weekly") {
         startDate = getStartOfWeekPK();
+        // Keep endDate as now (last 7 days)
+    } else if (period === "monthly") {
+        startDate = getStartOfMonthFor(monthQuery);
+        endDate = getEndOfMonthFor(monthQuery);
+    } else if (period === "yearly") {
+        startDate = new Date(Number(yearQuery), 0, 1, 0, 0, 0, 0);
+        endDate = new Date(Number(yearQuery), 11, 31, 23, 59, 59, 999);
     } else {
         startDate = getStartOfMonthPK();
     }
+
+    const dateRange = { $gte: startDate, $lte: endDate };
 
     // Fetch all necessary data for the period
     const [
@@ -59,19 +78,19 @@ export default async function ExpensesPage({ searchParams }) {
     ] = await Promise.all([
         // Sales for calculating revenue and COGS
         Sale.find(withUserId(userId, {
-            date: { $gte: startDate },
+            date: dateRange,
             deletedAt: null
         })).lean(),
 
         // Expenses
         Expense.find(withUserId(userId, {
-            date: { $gte: startDate },
+            date: dateRange,
             deletedAt: null
         })).populate("salemanId", "name").sort({ date: -1 }).lean(),
 
         // Purchases (Stock in) for analyzing total bought quantity
         Purchase.find(withUserId(userId, {
-            date: { $gte: startDate },
+            date: dateRange,
             deletedAt: null
         })).lean(),
 
@@ -84,11 +103,6 @@ export default async function ExpensesPage({ searchParams }) {
 
     // --- Aggregations ---
 
-    let totalGrossRevenue = 0;
-    let totalCOGS = 0;
-    let totalSoldQty = 0;
-    let totalDiscounts = 0;
-
     // Initialize product metrics for tracking per-item performance
     const productMetrics = {};
     products.forEach(p => {
@@ -98,36 +112,44 @@ export default async function ExpensesPage({ searchParams }) {
             purchased: 0,
             sold: 0,
             profit: 0,
-            currentStock: p.quantity || 0
+            currentStock: p.quantity || 0,
+            discount: 0,
         };
     });
 
+    // Aggregate totals from sales
+    const {
+        grossRevenue: totalGrossRevenue,
+        totalDiscount: totalDiscounts,
+        netRevenue: totalNetRevenue,
+        cogs: totalCOGS,
+        quantity: totalSoldQty,
+    } = accumulateSalesMetrics(sales);
+
+    // Per-product metrics (net of discounts)
     sales.forEach(sale => {
-        if (Array.isArray(sale.items)) {
-            sale.items.forEach(item => {
-                const qty = item.quantity || 0;
-                const buyPrice = item.buyPrice || 0;
-                const salePrice = item.price || 0;
-                const discount = item.discount || 0;
+        if (!Array.isArray(sale.items)) return;
+        sale.items.forEach(item => {
+            const pid = item.productId?.toString?.() ?? item.productId;
+            const metrics = productMetrics[pid];
+            if (!metrics) return;
 
-                totalSoldQty += qty;
-                const lineCOGS = qty * buyPrice;
-                const lineGrossRevenue = qty * salePrice;
-                const lineDiscount = qty * discount;
+            const {
+                quantity,
+                grossRevenue,
+                discountAmount,
+                cogs,
+            } = computeLineMetrics(item);
 
-                totalCOGS += lineCOGS;
-                totalGrossRevenue += lineGrossRevenue;
-                totalDiscounts += lineDiscount;
+            if (quantity <= 0) {
+                return;
+            }
 
-                // Update per-product metrics
-                const pid = item.productId.toString();
-                if (productMetrics[pid]) {
-                    productMetrics[pid].sold += qty;
-                    // Profit = (Sale Price - Buy Price) * Qty
-                    productMetrics[pid].profit += (lineGrossRevenue - lineCOGS);
-                }
-            });
-        }
+            metrics.sold += quantity;
+            metrics.discount += discountAmount;
+            // Net profit per product = gross revenue - COGS - discounts
+            metrics.profit += (grossRevenue - cogs - discountAmount);
+        });
     });
 
     // Aggregate purchases for the period
@@ -141,11 +163,6 @@ export default async function ExpensesPage({ searchParams }) {
     const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
     const totalBoughtQty = purchases.reduce((sum, pur) => sum + (pur.quantity || 0), 0);
 
-    // Final Net Profit = Gross Revenue - COGS - Expenses - Discounts
-    // (Or Net Revenue - COGS - Expenses)
-    // Here we use totalGrossRevenue, totalCOGS, and totalDiscounts as a separate expense
-    const totalAllExpenses = totalExpenses + totalDiscounts;
-
     // Serialize for client
     const serialExpenses = serializeForClient(expenses);
     const serialProducts = serializeForClient(products);
@@ -157,22 +174,26 @@ export default async function ExpensesPage({ searchParams }) {
                 title="Expenses & Profit"
                 description="Track your expenditures, stock purchases, and final net profit."
                 actions={
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         <DownloadReportButton
                             period={period}
-                            summary={{ totalRevenue: totalGrossRevenue, totalCOGS, totalExpenses: totalAllExpenses, totalBoughtQty, totalSoldQty }}
+                            summary={{
+                                totalRevenue: totalGrossRevenue,
+                                totalDiscounts,
+                                totalCOGS,
+                                totalExpenses,
+                                totalBoughtQty,
+                                totalSoldQty,
+                            }}
                             productMetrics={productMetrics}
                             expenses={serialExpenses}
                         />
-                        <Link href="/expenses?period=daily">
-                            <Button variant={period === "daily" ? "primary" : "outline"} className="h-8">Daily</Button>
-                        </Link>
-                        <Link href="/expenses?period=weekly">
-                            <Button variant={period === "weekly" ? "primary" : "outline"} className="h-8">Weekly</Button>
-                        </Link>
-                        <Link href="/expenses?period=monthly">
-                            <Button variant={period === "monthly" ? "primary" : "outline"} className="h-8">Monthly</Button>
-                        </Link>
+                        <DateFilter
+                            currentPeriod={period}
+                            currentDate={dateQuery}
+                            currentMonth={monthQuery}
+                            currentYear={yearQuery}
+                        />
                     </div>
                 }
             />
@@ -180,8 +201,9 @@ export default async function ExpensesPage({ searchParams }) {
             {/* Summary Cards */}
             <ProfitSummary
                 totalRevenue={totalGrossRevenue}
+                totalDiscounts={totalDiscounts}
                 totalCOGS={totalCOGS}
-                totalExpenses={totalAllExpenses}
+                totalExpenses={totalExpenses}
                 totalSoldQty={totalSoldQty}
                 totalBoughtQty={totalBoughtQty}
                 period={period}

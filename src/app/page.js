@@ -75,10 +75,14 @@ export default async function DashboardPage({ searchParams }) {
     totalSalesAgg,
     todaySalesAgg,
     monthSalesAgg,
+    totalDiscountAgg,
+    todayDiscountAgg,
+    monthDiscountAgg,
     totalCashAgg,
     totalCreditAgg,
     filteredSales,
   ] = await Promise.all([
+    // Net sales (after discount)
     Sale.aggregate([
       { $match: saleMatch },
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
@@ -86,7 +90,7 @@ export default async function DashboardPage({ searchParams }) {
     Sale.aggregate([
       {
         $match: withUserIdForAggregate(userId, {
-          date: { $gte: startOfToday },
+          date: { $gte: startOfDay, $lte: endOfDay },
           deletedAt: null,
         }),
       },
@@ -95,12 +99,36 @@ export default async function DashboardPage({ searchParams }) {
     Sale.aggregate([
       {
         $match: withUserIdForAggregate(userId, {
-          date: { $gte: startOfMonth },
+          date: { $gte: monthStart, $lte: monthEnd },
           deletedAt: null,
         }),
       },
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]),
+    // Discounts
+    Sale.aggregate([
+      { $match: saleMatch },
+      { $group: { _id: null, total: { $sum: "$totalDiscount" } } },
+    ]),
+    Sale.aggregate([
+      {
+        $match: withUserIdForAggregate(userId, {
+          date: { $gte: startOfDay, $lte: endOfDay },
+          deletedAt: null,
+        }),
+      },
+      { $group: { _id: null, total: { $sum: "$totalDiscount" } } },
+    ]),
+    Sale.aggregate([
+      {
+        $match: withUserIdForAggregate(userId, {
+          date: { $gte: monthStart, $lte: monthEnd },
+          deletedAt: null,
+        }),
+      },
+      { $group: { _id: null, total: { $sum: "$totalDiscount" } } },
+    ]),
+    // Cash / credit summaries
     Sale.aggregate([
       { $match: saleMatch },
       { $group: { _id: null, total: { $sum: "$cashCollected" } } },
@@ -109,6 +137,7 @@ export default async function DashboardPage({ searchParams }) {
       { $match: saleMatch },
       { $group: { _id: null, total: { $sum: "$creditRemaining" } } },
     ]),
+    // Listing data
     Sale.find(
       period === "all"
         ? saleMatch
@@ -126,9 +155,17 @@ export default async function DashboardPage({ searchParams }) {
       .lean(),
   ]);
 
-  const totalSale = totalSalesAgg[0]?.total || 0;
-  const todaySale = todaySalesAgg[0]?.total || 0;
-  const monthlySale = monthSalesAgg[0]?.total || 0;
+  const totalSaleNet = totalSalesAgg[0]?.total || 0;
+  const todaySaleNet = todaySalesAgg[0]?.total || 0;
+  const monthlySaleNet = monthSalesAgg[0]?.total || 0;
+
+  const totalSaleDiscount = totalDiscountAgg[0]?.total || 0;
+  const todaySaleDiscount = todayDiscountAgg[0]?.total || 0;
+  const monthlySaleDiscount = monthDiscountAgg[0]?.total || 0;
+
+  const totalSale = totalSaleNet + totalSaleDiscount;
+  const todaySale = todaySaleNet + todaySaleDiscount;
+  const monthlySale = monthlySaleNet + monthlySaleDiscount;
   const totalCashCollected = totalCashAgg[0]?.total || 0;
   const totalOutstandingCredit = totalCreditAgg[0]?.total || 0;
 
@@ -281,7 +318,9 @@ export default async function DashboardPage({ searchParams }) {
             <div className="text-xl font-semibold text-slate-900 sm:text-2xl">
               {formatAmount(monthlySale)}
             </div>
-            <p className="mt-1 text-xs text-slate-500">This month</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {period === "monthly" ? monthLabel : "This month"}
+            </p>
           </CardBody>
         </Card>
         <Card>
@@ -338,6 +377,7 @@ export default async function DashboardPage({ searchParams }) {
                   <TH>Date</TH>
                   <TH>Shop</TH>
                   <TH>Saleman</TH>
+                  <TH className="text-right">Discount</TH>
                   <TH className="text-right">Amount</TH>
                   <TH className="text-right">Cash</TH>
                   <TH className="text-right">Credit</TH>
@@ -365,6 +405,9 @@ export default async function DashboardPage({ searchParams }) {
                       </TD>
                       <TD>{sale.shopId?.name || "-"}</TD>
                       <TD>{sale.salemanId?.name || "-"}</TD>
+                      <TD className="text-right text-red-500 text-xs">
+                        {formatAmount(sale.totalDiscount)}
+                      </TD>
                       <TD className="text-right font-medium">
                         {formatAmount(sale.totalAmount)}
                       </TD>
@@ -382,11 +425,16 @@ export default async function DashboardPage({ searchParams }) {
                   const subtotal = filteredSales.reduce((sum, s) => sum + (s.totalAmount ?? 0), 0);
                   const collected = filteredSales.reduce((sum, s) => sum + (s.cashCollected ?? 0), 0);
                   const remaining = subtotal - collected;
+                  const totalDiscount = filteredSales.reduce(
+                    (sum, s) => sum + (s.totalDiscount ?? 0),
+                    0
+                  );
                   return (
                     <TR className="border-t-2 border-slate-200 bg-slate-50 font-semibold w-full">
                       <TD colSpan={4} className="text-left text-slate-700">
                         Subtotal
                       </TD>
+
                       <TD className="text-left text-slate-900">
                         {formatAmount(subtotal)}
                       </TD>

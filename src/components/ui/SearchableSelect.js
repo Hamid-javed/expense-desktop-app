@@ -23,6 +23,7 @@ export function SearchableSelect({
     const [search, setSearch] = useState("");
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
     const containerRef = useRef(null);
+    const dropdownRef = useRef(null);
 
     // Find the label for the current value
     const selectedOption = useMemo(
@@ -42,7 +43,10 @@ export function SearchableSelect({
     // Handle clicking outside to close the dropdown
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (containerRef.current && !containerRef.current.contains(event.target)) {
+            const isInsideContainer = containerRef.current && containerRef.current.contains(event.target);
+            const isInsideDropdown = dropdownRef.current && dropdownRef.current.contains(event.target);
+
+            if (!isInsideContainer && !isInsideDropdown) {
                 setIsOpen(false);
                 setSearch("");
             }
@@ -108,6 +112,7 @@ export function SearchableSelect({
             {isOpen && (
                 <Portal>
                     <div
+                        ref={dropdownRef}
                         style={{
                             position: 'absolute',
                             top: coords.top,

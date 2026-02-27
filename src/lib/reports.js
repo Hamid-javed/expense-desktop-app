@@ -67,27 +67,39 @@ export async function generateExpenseReportPdf({
     y -= 15;
     const summaryWidth = (width - 2 * margin) / 2;
 
+    const totalRevenue = summary.totalRevenue ?? 0;
+    const totalDiscounts = summary.totalDiscounts ?? 0;
+    const totalCOGS = summary.totalCOGS ?? 0;
+    const totalExpenses = summary.totalExpenses ?? 0;
+    const expensesAndDiscounts = totalExpenses + totalDiscounts;
+
     // Left Column
     let tempY = y;
     draw("Gross Revenue:", margin, tempY, normal, true);
-    draw(formatNum(summary.totalRevenue), margin + 120, tempY, normal);
+    draw(formatNum(totalRevenue), margin + 140, tempY, normal);
+    tempY -= 15;
+    draw("Discounts:", margin, tempY, normal, true);
+    draw(`- ${formatNum(totalDiscounts)}`, margin + 140, tempY, normal);
+    tempY -= 15;
+    draw("Net Revenue:", margin, tempY, normal, true);
+    draw(formatNum(totalRevenue - totalDiscounts), margin + 140, tempY, normal, true);
     tempY -= 15;
     draw("Cost of Goods Sold (COGS):", margin, tempY, normal, true);
-    draw(`- ${formatNum(summary.totalCOGS)}`, margin + 120, tempY, normal);
+    draw(`- ${formatNum(totalCOGS)}`, margin + 140, tempY, normal);
     tempY -= 15;
     draw("Gross Profit (on base price):", margin, tempY, normal, true);
-    draw(formatNum(summary.totalRevenue - summary.totalCOGS), margin + 120, tempY, normal, true);
+    draw(formatNum(totalRevenue - totalCOGS), margin + 140, tempY, normal, true);
 
     // Right Column
     tempY = y;
     draw("Total Expenses & Discounts:", margin + summaryWidth, tempY, normal, true, rgb(0.8, 0, 0));
-    draw(`- ${formatNum(summary.totalExpenses)}`, margin + summaryWidth + 140, tempY, normal);
+    draw(`- ${formatNum(expensesAndDiscounts)}`, margin + summaryWidth + 160, tempY, normal);
     tempY -= 15;
     draw("Total Purchased Qty:", margin + summaryWidth, tempY, normal, true);
-    draw(summary.totalBoughtQty.toString(), margin + summaryWidth + 140, tempY, normal);
+    draw(summary.totalBoughtQty.toString(), margin + summaryWidth + 160, tempY, normal);
     tempY -= 20;
 
-    const netProfit = (summary.totalRevenue - summary.totalCOGS) - summary.totalExpenses;
+    const netProfit = (totalRevenue - totalDiscounts) - totalCOGS - totalExpenses;
     const profitColor = netProfit >= 0 ? rgb(0, 0.5, 0) : rgb(0.8, 0, 0);
     draw("NET PROFIT:", margin + summaryWidth, tempY, subHeading, true, profitColor);
     draw(formatNum(netProfit), margin + summaryWidth + 120, tempY, subHeading, true, profitColor);

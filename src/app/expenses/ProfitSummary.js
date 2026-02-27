@@ -4,6 +4,7 @@ import { Card, CardBody, CardHeader } from "../../components/ui/Card";
 
 export function ProfitSummary({
     totalRevenue,
+    totalDiscounts = 0,
     totalCOGS,
     totalExpenses,
     totalBoughtQty,
@@ -11,7 +12,8 @@ export function ProfitSummary({
     period
 }) {
     const grossProfit = totalRevenue - totalCOGS;
-    const netProfit = grossProfit - totalExpenses;
+    const netSales = totalRevenue - totalDiscounts;
+    const netProfit = netSales - totalCOGS - totalExpenses;
 
     const format = (n) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const formatQty = (n) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -26,8 +28,20 @@ export function ProfitSummary({
                 <CardBody>
                     <div className="space-y-2">
                         <div className="flex justify-between border-b pb-1">
-                            <span className="text-slate-500">Total Sales:</span>
+                            <span className="text-slate-500">Gross Sales:</span>
                             <span className="font-semibold text-slate-900">{format(totalRevenue)}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                            <span className="text-slate-500">Discounts:</span>
+                            <span className="font-semibold text-red-600">
+                                -{format(totalDiscounts)}
+                            </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                            <span className="text-slate-500">Net Sales:</span>
+                            <span className="font-semibold text-slate-900">
+                                {format(netSales)}
+                            </span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-slate-500">Sold Quantity:</span>

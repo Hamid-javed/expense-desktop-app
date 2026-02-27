@@ -1,4 +1,4 @@
-export const UNITS = ["pcs", "box", "kg", "ltr"];
+export const UNITS = ["cotton", "pet", "pcs", "box", "kg", "ltr",];
 
 export const PAYMENT_TYPES = ["cash", "credit"];
 

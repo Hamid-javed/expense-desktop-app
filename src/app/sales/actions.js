@@ -164,7 +164,8 @@ export async function createSale(formData) {
 
           existing.quantity = oldQty + newQty;
           // Calculate weighted average for per-unit discount
-          existing.discount = ((oldQty * oldDisc) + (newQty * newDisc)) / existing.quantity;
+          existing.discount =
+            (oldQty * oldDisc + newQty * newDisc) / existing.quantity;
           existing.lineTotal = existing.quantity * (existing.price - existing.discount);
         } else {
           existingItemsMap.set(productIdStr, {
@@ -190,7 +191,8 @@ export async function createSale(formData) {
 
           existing.quantity = oldQty + newQty;
           // Calculate weighted average for per-unit discount
-          existing.discount = ((oldQty * oldDisc) + (newQty * newDisc)) / existing.quantity;
+          existing.discount =
+            (oldQty * oldDisc + newQty * newDisc) / existing.quantity;
           existing.lineTotal = existing.quantity * (existing.price - existing.discount);
 
           // Track product updates (only for the new quantity)
@@ -198,7 +200,6 @@ export async function createSale(formData) {
             productId: newItem.productId,
             quantityChange: newItem.quantity,
             revenueChange: newItem.lineTotal,
-            oldQuantity: oldQuantity,
           });
         } else {
           // Different product: add as new item
@@ -209,7 +210,6 @@ export async function createSale(formData) {
             productId: newItem.productId,
             quantityChange: newItem.quantity,
             revenueChange: newItem.lineTotal,
-            oldQuantity: 0,
           });
         }
       });
@@ -217,7 +217,7 @@ export async function createSale(formData) {
       // Convert map back to array
       const mergedItems = Array.from(existingItemsMap.values());
       const mergedTotalDiscount = mergedItems.reduce(
-        (sum, it) => sum + (it.discount || 0),
+        (sum, it) => sum + (it.quantity * (it.discount || 0)),
         0
       );
       const mergedTotalAmount = mergedItems.reduce(
