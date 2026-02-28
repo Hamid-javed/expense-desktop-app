@@ -104,12 +104,13 @@ export async function generateExpenseReportPdf({
     draw("NET PROFIT:", margin + summaryWidth, tempY, subHeading, true, profitColor);
     draw(formatNum(netProfit), margin + summaryWidth + 120, tempY, subHeading, true, profitColor);
 
-    y = tempY - 30;
+    y = tempY - 45; // Increased spacing to prevent overlap
     drawLine(margin, y + 10, width - margin, y + 10, 0.5);
 
     // --- Product Performance Table ---
-    draw("PRODUCT PERFORMANCE", margin, y, subHeading, true);
     y -= 15;
+    draw("PRODUCT PERFORMANCE", margin, y, subHeading, true);
+    y -= 25; // Added more spacing after heading before table starts
 
     const colW = [
         { w: 180, x: margin },       // Product
