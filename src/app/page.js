@@ -19,6 +19,7 @@ import {
   formatDatePK,
   getStartOfMonthFor,
   getEndOfMonthFor,
+  getDateKeyPK,
 } from "../lib/dateUtils";
 import { INVOICE_PREFIX } from "../lib/config";
 
@@ -393,8 +394,13 @@ export default async function DashboardPage({ searchParams }) {
                   return (
                     <TR key={sale._id.toString()}>
                       <TD className="font-mono text-xs">
-                        {INVOICE_PREFIX}
-                        {sale.invoiceId}
+                        <Link
+                          href={sale.shopId ? `/shops/${sale.shopId._id.toString()}?range=date&date=${getDateKeyPK(sale.date)}` : '#'}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {INVOICE_PREFIX}
+                          {sale.invoiceId}
+                        </Link>
                       </TD>
                       <TD className="text-slate-600">
                         {formatDatePK(sale.date, {
