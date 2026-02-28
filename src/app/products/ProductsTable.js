@@ -65,16 +65,6 @@ export function ProductsTable({ products, createProduct, updateProduct, togglePr
           </select>
         </label>
         <Input
-          label="Purchase Price"
-          name="buyPrice"
-          type="number"
-          step="0.01"
-          min="0"
-          required
-          className="w-32"
-          placeholder="0.00"
-        />
-        <Input
           label="Sale Price"
           name="price"
           type="number"
@@ -83,16 +73,6 @@ export function ProductsTable({ products, createProduct, updateProduct, togglePr
           required
           className="w-32"
           placeholder="0.00"
-        />
-        <Input
-          label="Quantity / Stock"
-          name="quantity"
-          type="number"
-          step="1"
-          min="0"
-          className="w-32"
-          placeholder="0"
-          defaultValue="0"
         />
         <div className="flex items-end">
           <Button type="submit">Add Product</Button>
@@ -114,7 +94,7 @@ export function ProductsTable({ products, createProduct, updateProduct, togglePr
         />
       </div>
 
-      <Table>
+      <Table containerClassName="max-h-[500px] overflow-y-auto">
         <THead>
           <TR>
             <TH>Name</TH>
@@ -185,20 +165,7 @@ export function ProductsTable({ products, createProduct, updateProduct, togglePr
                   )}
                 </TD>
                 <TD className="text-right">
-                  {isEditing ? (
-                    <Input
-                      form={formId}
-                      name="buyPrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      defaultValue={p.buyPrice}
-                      className="w-24 text-right"
-                      required
-                    />
-                  ) : (
-                    <span>{Number(p.buyPrice || 0).toFixed(2)}</span>
-                  )}
+                  <span>{Number(p.buyPrice || 0).toFixed(2)}</span>
                 </TD>
                 <TD className="text-right">
                   {isEditing ? (
@@ -217,21 +184,9 @@ export function ProductsTable({ products, createProduct, updateProduct, togglePr
                   )}
                 </TD>
                 <TD className="text-right">
-                  {isEditing ? (
-                    <Input
-                      form={formId}
-                      name="quantity"
-                      type="number"
-                      step="1"
-                      min="0"
-                      defaultValue={p.quantity || 0}
-                      className="w-20 text-right"
-                    />
-                  ) : (
-                    <span className={Number(p.quantity || 0) === 0 ? "text-red-600 font-medium" : "text-slate-700"}>
-                      {Number(p.quantity || 0).toLocaleString()}
-                    </span>
-                  )}
+                  <span className={Number(p.quantity || 0) === 0 ? "text-red-600 font-medium" : "text-slate-700"}>
+                    {Number(p.quantity || 0).toLocaleString()}
+                  </span>
                 </TD>
                 <TD className="text-right">
                   {Number(p.totalSold || 0).toLocaleString()}

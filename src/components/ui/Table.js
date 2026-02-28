@@ -14,7 +14,7 @@ export function Table({ children, className, containerClassName }) {
 
 export function THead({ children }) {
   return (
-    <thead className="sticky top-0 z-10 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-sm">
+    <thead className="sticky top-0 z-10 bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] border-b border-slate-200">
       {children}
     </thead>
   );

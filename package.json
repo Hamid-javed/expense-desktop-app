@@ -6,7 +6,7 @@
   "author": "",
   "main": "main.js",
   "build": {
-    "appId": "com.expense.sales",
+    "appId": "com.hamid.expense.manager",
     "productName": "Expense & Sales Manager",
     "compression": "maximum",
     "icon": "build/icon.ico",
@@ -27,10 +27,6 @@
       {
         "from": "build/icon.ico",
         "to": "icon.ico"
-      },
-      {
-        "from": "build/node-runtime",
-        "to": "node-runtime"
       }
     ],
     "win": {
@@ -60,8 +56,8 @@
     "seed:user": "node --env-file=.env scripts/seed.mjs --user-only",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3100 && electron .\"",
     "electron:start": "electron .",
-    "pack": "npm run build && node scripts/copy-standalone-assets.cjs && node scripts/download-node.cjs && node scripts/build-icon.cjs && npx electron-builder --win",
-    "dist": "npm run build && node scripts/copy-standalone-assets.cjs && node scripts/download-node.cjs && node scripts/build-icon.cjs && npx electron-builder --win --publish never"
+    "pack": "npm run build && node scripts/copy-standalone-assets.cjs && node scripts/build-icon.cjs && npx electron-builder --win",
+    "dist": "npm run build && node scripts/copy-standalone-assets.cjs && node scripts/build-icon.cjs && npx electron-builder --win --publish never"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -4,16 +4,30 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SearchableSelect } from "../../components/ui/SearchableSelect";
 
 export function PurchaseForm({ products, recordPurchase }) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [selectedProductId, setSelectedProductId] = useState("");
+
+    // Format products for SearchableSelect
+    const productOptions = products.map(p => ({
+        id: p._id,
+        label: `${p.name} (${p.sku})`
+    }));
 
     async function handleSubmit(formData) {
         setLoading(true);
+        // Ensure productId is set in formData if not already present
+        if (!formData.get("productId") && selectedProductId) {
+            formData.set("productId", selectedProductId);
+        }
+
         const result = await recordPurchase(formData);
         setLoading(false);
         if (!result?.error) {
+            setSelectedProductId(""); // Reset selection on success
             router.refresh();
         } else {
             alert(result.error);
@@ -22,21 +36,15 @@ export function PurchaseForm({ products, recordPurchase }) {
 
     return (
         <form action={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
-                <span>Product</span>
-                <select
-                    name="productId"
-                    required
-                    className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
-                >
-                    <option value="">Select Product...</option>
-                    {products.map((p) => (
-                        <option key={p._id} value={p._id}>
-                            {p.name} ({p.sku})
-                        </option>
-                    ))}
-                </select>
-            </label>
+            <SearchableSelect
+                label="Product"
+                name="productId"
+                options={productOptions}
+                value={selectedProductId}
+                onChange={setSelectedProductId}
+                placeholder="Search..."
+                required
+            />
 
             <Input
                 label="Quantity"

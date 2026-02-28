@@ -127,13 +127,9 @@ function startNextServerPackaged() {
     return;
   }
 
-  // Use bundled Node.js runtime if available, otherwise fallback to system node
-  const bundledNodePath = path.join(process.resourcesPath, 'node-runtime', 'node.exe');
-  const nodeExecutable = fs.existsSync(bundledNodePath) ? bundledNodePath : 'node';
+  // Use Electron's built-in node runtime
+  const nodeExecutable = process.execPath;
 
-  // Use shell: false to properly handle paths with spaces on Windows
-  // When using bundled node, we have a full path, so shell: false works fine
-  // When falling back to system 'node', it will still work if node is in PATH
   nextProcess = spawn(nodeExecutable, [serverPath], {
     cwd: standaloneDir,
     shell: false,
@@ -143,6 +139,7 @@ function startNextServerPackaged() {
       PORT: String(PORT),
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
+      ELECTRON_RUN_AS_NODE: '1', // This tells Electron to behave like Node.js
       ELECTRON_USER_DATA: app.getPath('userData'),
     },
     stdio: 'inherit',
@@ -150,7 +147,6 @@ function startNextServerPackaged() {
   });
   nextProcess.on('error', (err) => {
     console.error('Failed to start Next server:', err);
-    console.error('Node executable used:', nodeExecutable);
     app.quit();
   });
   nextProcess.on('exit', (code, signal) => {

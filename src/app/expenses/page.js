@@ -223,6 +223,13 @@ export default async function ExpensesPage({ searchParams }) {
                             <div className="border-t pt-6" />
 
                             <section>
+                                <h3 className="mb-3 text-sm font-bold text-slate-800 uppercase tracking-tight">Stock In (Purchase)</h3>
+                                <PurchaseForm products={serialProducts} recordPurchase={recordPurchase} />
+                            </section>
+
+                            <div className="border-t pt-6" />
+
+                            <section>
                                 <h3 className="mb-3 text-sm font-bold text-slate-800 uppercase tracking-tight">Saleman Payment (Salary/Advance)</h3>
                                 <SalemanPaymentForm salemen={serialSalemen} recordSalemanPayment={recordSalemanPayment} />
                             </section>

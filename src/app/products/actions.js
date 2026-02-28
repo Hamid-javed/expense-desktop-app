@@ -6,6 +6,8 @@ import { connectToDatabase, isMongoDB } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { Product } from "../../models/Product";
+import { Purchase } from "../../models/Purchase";
+import { parseDatePK } from "../../lib/dateUtils";
 import { UNITS } from "../../lib/config";
 
 const productSchema = z.object({
@@ -22,18 +24,11 @@ export async function createProduct(formData) {
     const userId = await requireUserId();
     await connectToDatabase();
 
-    const quantityInput = formData.get("quantity");
-    const quantityValue = quantityInput !== null && quantityInput !== undefined && quantityInput !== ""
-      ? Number(quantityInput)
-      : 0;
-
     const parsed = productSchema.safeParse({
       name: formData.get("name")?.trim(),
       sku: formData.get("sku")?.trim(),
       unit: formData.get("unit") || "pcs",
-      buyPrice: formData.get("buyPrice") || 0,
       price: formData.get("price"),
-      quantity: quantityValue,
     });
 
     if (!parsed.success) {
@@ -47,10 +42,10 @@ export async function createProduct(formData) {
       name: data.name,
       sku: data.sku,
       unit: data.unit,
-      buyPrice: data.buyPrice,
+      buyPrice: 0, // default
       price: data.price,
-      quantity: data.quantity ?? 0,
-      totalBought: data.quantity ?? 0,
+      quantity: 0, // default
+      totalBought: 0, // default
     };
     await Product.create(isMongoDB() ? { userId, ...productData } : productData);
 
@@ -72,13 +67,16 @@ export async function updateProduct(formData) {
       return { error: "Missing product id" };
     }
 
+    const existingProduct = await Product.findOne(withUserId(userId, { _id: id })).lean();
+    if (!existingProduct) {
+      return { error: "Product not found" };
+    }
+
     // Get all form values
     const name = formData.get("name")?.trim();
     const sku = formData.get("sku")?.trim();
     const unit = formData.get("unit");
-    const buyPrice = formData.get("buyPrice");
     const price = formData.get("price");
-    const quantity = formData.get("quantity");
 
     // Build update object
     const updateData = {};
@@ -92,42 +90,20 @@ export async function updateProduct(formData) {
     if (unit) {
       updateData.unit = unit;
     }
-    if (buyPrice !== null && buyPrice !== undefined && buyPrice !== "") {
-      updateData.buyPrice = Number(buyPrice);
-    }
     if (price !== null && price !== undefined && price !== "") {
       updateData.price = Number(price);
     }
 
-    // Quantity handling - always include if provided (even if 0)
-    if (quantity !== null && quantity !== undefined && quantity !== "") {
-      const qtyNum = Number(quantity);
-      if (!isNaN(qtyNum) && qtyNum >= 0) {
-        updateData.quantity = qtyNum;
-      }
-    }
-
-    // Validate non-quantity fields
-    const validationData = { ...updateData };
-    const quantityValue = validationData.quantity;
-    delete validationData.quantity;
-
-    const parsed = productSchema.partial().safeParse(validationData);
+    const parsed = productSchema.partial().safeParse(updateData);
 
     if (!parsed.success) {
       console.error("Validation error:", parsed.error.flatten());
       return { error: "Invalid product data" };
     }
 
-    // Build final update - include validated fields + quantity
-    const finalUpdate = { ...parsed.data };
-    if (quantityValue !== undefined) {
-      finalUpdate.quantity = quantityValue;
-    }
-
     await Product.findOneAndUpdate(
       withUserId(userId, { _id: id }),
-      finalUpdate,
+      parsed.data,
       { new: true }
     );
 

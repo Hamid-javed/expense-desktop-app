@@ -49,9 +49,9 @@ export function AppShell({ children }) {
     : baseNavItems;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="h-screen flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
       {/* Header */}
-      <header className="flex h-14 items-center justify-between gap-4 border-b bg-white px-4 shadow-sm sm:px-6">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b bg-white px-4 shadow-sm sm:px-6 z-20">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -97,9 +97,9 @@ export function AppShell({ children }) {
         </form>
       </header>
 
-      <div className="flex">
+      <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
-        <aside className="hidden w-56 shrink-0 border-r bg-white px-3 py-4 md:block">
+        <aside className="hidden w-56 shrink-0 border-r bg-white px-3 py-4 md:block overflow-y-auto">
           <nav className="space-y-1 text-sm">
             {navItems.map((item) => (
               <Link
@@ -128,7 +128,7 @@ export function AppShell({ children }) {
         )}
         <aside
           className={clsx(
-            "fixed inset-y-0 left-0 z-50 w-64 transform border-r bg-white shadow-lg transition-transform duration-200 ease-out md:hidden",
+            "fixed inset-y-0 left-0 z-50 w-64 transform border-r bg-white shadow-lg transition-transform duration-200 ease-out md:hidden overflow-y-auto",
             mobileNavOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
@@ -174,7 +174,7 @@ export function AppShell({ children }) {
         </aside>
 
         {/* Main content */}
-        <main className="min-w-0 flex-1 px-3 py-4 sm:px-4 sm:py-6 md:px-6 lg:px-8">
+        <main className="min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-6 md:px-6 lg:px-8">
           {children}
         </main>
       </div>

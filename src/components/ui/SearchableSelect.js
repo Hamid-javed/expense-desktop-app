@@ -131,7 +131,7 @@ export function SearchableSelect({
                             <input
                                 autoFocus
                                 type="text"
-                                className="block w-full pl-7 pr-2 py-1.5 border border-slate-200 rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500"
+                                className="block w-full pl-7 pr-2 py-1.5 border border-slate-200 rounded text-[11px] text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500"
                                 placeholder="Filter..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
