@@ -20,7 +20,7 @@ export function ExpenseForm({ salemen, createExpense }) {
     }
 
     return (
-        <form action={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <form action={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
             <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
                 <span>Category</span>
                 <select
@@ -70,17 +70,14 @@ export function ExpenseForm({ salemen, createExpense }) {
                 </select>
             </label>
 
-            <div className="flex items-end gap-2">
-                <Input
-                    label="Description"
-                    name="description"
-                    placeholder="Optional notes"
-                    className="flex-1"
-                />
-                <Button type="submit" disabled={loading}>
-                    {loading ? "Adding..." : "Add Expense"}
-                </Button>
-            </div>
+            <Input
+                label="Description"
+                name="description"
+                placeholder="Optional notes"
+            />
+            <Button type="submit" disabled={loading} className="w-full h-9">
+                {loading ? "Adding..." : "Add Expense"}
+            </Button>
         </form>
     );
 }

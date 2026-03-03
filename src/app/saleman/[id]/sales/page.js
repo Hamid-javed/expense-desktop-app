@@ -4,6 +4,7 @@ import { withUserId } from "../../../../lib/tenant";
 import { Saleman } from "../../../../models/Saleman";
 import { Sale } from "../../../../models/Sale";
 import "../../../../models/Product"; // Register Product for Sale.populate("items.productId")
+import "../../../../models/Shop"; // Register Shop for Sale.populate("shopId")
 import { DailySalesSummary } from "../../../../models/DailySalesSummary";
 import { RouteModel } from "../../../../models/Route";
 import { PageHeader } from "../../../../components/layout/PageHeader";
@@ -11,7 +12,6 @@ import { Card, CardBody, CardHeader } from "../../../../components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "../../../../components/ui/Table";
 import Link from "next/link";
 import { Button } from "../../../../components/ui/Button";
-import { QuantityEditor } from "./QuantityEditor";
 import { InvoiceDownloadPrompt } from "./InvoiceDownloadPrompt";
 import { getTodayPK, getStartOfDayPK, getEndOfDayPK, getDateKeyPK, formatDatePK, parseDatePK } from "../../../../lib/dateUtils";
 
@@ -372,12 +372,7 @@ export default async function SalemanSalesPage({ params, searchParams }) {
                                     {product?.sku || "-"}
                                   </TD>
                                   <TD className="text-right">
-                                    <QuantityEditor
-                                      saleId={sale._id.toString()}
-                                      itemIndex={idx}
-                                      currentQuantity={item.quantity}
-                                      unit={product?.unit || ""}
-                                    />
+                                    {item.quantity} {product?.unit || ""}
                                   </TD>
                                   <TD className="text-right">
                                     {item.price.toFixed(2)}

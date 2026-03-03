@@ -34,6 +34,59 @@ function initializeSchema(db) {
   // Enable foreign keys
   db.pragma("foreign_keys = ON");
 
+  // Migration: rename staff to saleman
+  try {
+    const tableList = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(t => t.name);
+
+    // 1. Rename staff table to saleman if it exists
+    if (tableList.includes("staff") && !tableList.includes("saleman")) {
+      db.exec("ALTER TABLE staff RENAME TO saleman");
+      console.log("Renamed table 'staff' to 'saleman'");
+    }
+
+    // 2. Ensure saleman table has salemanId column (migrate from legacy staff schema)
+    if (tableList.includes("staff") || tableList.includes("saleman")) {
+      const salemanCols = db.prepare("PRAGMA table_info(saleman)").all().map((c) => c.name);
+
+      // Legacy: rename staffId -> salemanId
+      if (salemanCols.includes("staffId") && !salemanCols.includes("salemanId")) {
+        db.exec("ALTER TABLE saleman RENAME COLUMN staffId TO salemanId");
+      }
+
+      // If salemanId column still does not exist (very old DB), add it
+      const updatedCols = db.prepare("PRAGMA table_info(saleman)").all().map((c) => c.name);
+      if (!updatedCols.includes("salemanId")) {
+        db.exec("ALTER TABLE saleman ADD COLUMN salemanId TEXT");
+      }
+    }
+
+    // 3. Rename columns in routes table
+    if (tableList.includes("routes")) {
+      const routesCols = db.prepare("PRAGMA table_info(routes)").all().map(c => c.name);
+      if (routesCols.includes("assignedStaff") && !routesCols.includes("assignedSaleman")) {
+        db.exec("ALTER TABLE routes RENAME COLUMN assignedStaff TO assignedSaleman");
+      }
+    }
+
+    // 4. Rename columns in sales table
+    if (tableList.includes("sales")) {
+      const salesCols = db.prepare("PRAGMA table_info(sales)").all().map(c => c.name);
+      if (salesCols.includes("staffId") && !salesCols.includes("salemanId")) {
+        db.exec("ALTER TABLE sales RENAME COLUMN staffId TO salemanId");
+      }
+    }
+
+    // 5. Rename columns in daily_sales_summaries table
+    if (tableList.includes("daily_sales_summaries")) {
+      const summaryCols = db.prepare("PRAGMA table_info(daily_sales_summaries)").all().map(c => c.name);
+      if (summaryCols.includes("staffId") && !summaryCols.includes("salemanId")) {
+        db.exec("ALTER TABLE daily_sales_summaries RENAME COLUMN staffId TO salemanId");
+      }
+    }
+  } catch (e) {
+    console.error("Migration error (initial):", e);
+  }
+
   // Products table
   db.exec(`
     CREATE TABLE IF NOT EXISTS products (
@@ -52,9 +105,15 @@ function initializeSchema(db) {
       createdAt INTEGER,
       updatedAt INTEGER
     );
-    CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
-    CREATE INDEX IF NOT EXISTS idx_products_deleted ON products(deletedAt);
   `);
+  try {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+      CREATE INDEX IF NOT EXISTS idx_products_deleted ON products(deletedAt);
+    `);
+  } catch (e) {
+    console.warn("Could not create products indices:", e.message);
+  }
 
   // Routes table
   db.exec(`
@@ -68,8 +127,12 @@ function initializeSchema(db) {
       updatedAt INTEGER,
       FOREIGN KEY (assignedSaleman) REFERENCES saleman(id)
     );
-    CREATE INDEX IF NOT EXISTS idx_routes_deleted ON routes(deletedAt);
   `);
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_routes_deleted ON routes(deletedAt);`);
+  } catch (e) {
+    console.warn("Could not create routes indices:", e.message);
+  }
 
   // Saleman table
   db.exec(`
@@ -86,10 +149,16 @@ function initializeSchema(db) {
       updatedAt INTEGER,
       FOREIGN KEY (routeId) REFERENCES routes(id)
     );
-    CREATE INDEX IF NOT EXISTS idx_saleman_salemanId ON saleman(salemanId);
-    CREATE INDEX IF NOT EXISTS idx_saleman_routeId ON saleman(routeId);
-    CREATE INDEX IF NOT EXISTS idx_saleman_deleted ON saleman(deletedAt);
   `);
+  try {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_saleman_salemanId ON saleman(salemanId);
+      CREATE INDEX IF NOT EXISTS idx_saleman_routeId ON saleman(routeId);
+      CREATE INDEX IF NOT EXISTS idx_saleman_deleted ON saleman(deletedAt);
+    `);
+  } catch (e) {
+    console.warn("Could not create saleman indices:", e.message);
+  }
 
   // Order Takers table
   db.exec(`
@@ -103,8 +172,12 @@ function initializeSchema(db) {
       createdAt INTEGER,
       updatedAt INTEGER
     );
-    CREATE INDEX IF NOT EXISTS idx_order_takers_deleted ON order_takers(deletedAt);
   `);
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_order_takers_deleted ON order_takers(deletedAt);`);
+  } catch (e) {
+    console.warn("Could not create order_takers indices:", e.message);
+  }
 
   // Shops table
   db.exec(`
@@ -122,9 +195,15 @@ function initializeSchema(db) {
       updatedAt INTEGER,
       FOREIGN KEY (routeId) REFERENCES routes(id)
     );
-    CREATE INDEX IF NOT EXISTS idx_shops_routeId ON shops(routeId);
-    CREATE INDEX IF NOT EXISTS idx_shops_deleted ON shops(deletedAt);
   `);
+  try {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_shops_routeId ON shops(routeId);
+      CREATE INDEX IF NOT EXISTS idx_shops_deleted ON shops(deletedAt);
+    `);
+  } catch (e) {
+    console.warn("Could not create shops indices:", e.message);
+  }
 
   // Users table
   db.exec(`
@@ -139,9 +218,15 @@ function initializeSchema(db) {
       createdAt INTEGER,
       updatedAt INTEGER
     );
-    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-    CREATE INDEX IF NOT EXISTS idx_users_deleted ON users(deletedAt);
   `);
+  try {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_users_deleted ON users(deletedAt);
+    `);
+  } catch (e) {
+    console.warn("Could not create users indices:", e.message);
+  }
 
   // Invoice Counter table
   db.exec(`
@@ -176,12 +261,19 @@ function initializeSchema(db) {
       FOREIGN KEY (salemanId) REFERENCES saleman(id),
       FOREIGN KEY (shopId) REFERENCES shops(id)
     );
-    CREATE INDEX IF NOT EXISTS idx_sales_invoiceId ON sales(invoiceId);
-    CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date);
-    CREATE INDEX IF NOT EXISTS idx_sales_salemanId ON sales(salemanId);
-    CREATE INDEX IF NOT EXISTS idx_sales_shopId ON sales(shopId);
-    CREATE INDEX IF NOT EXISTS idx_sales_deleted ON sales(deletedAt);
   `);
+  try {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_sales_invoiceId ON sales(invoiceId);
+      CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date);
+      CREATE INDEX IF NOT EXISTS idx_sales_salemanId ON sales(salemanId);
+      CREATE INDEX IF NOT EXISTS idx_sales_shopId ON sales(shopId);
+      CREATE INDEX IF NOT EXISTS idx_sales_deleted ON sales(deletedAt);
+    `);
+  } catch (e) {
+    console.warn("Could not create sales indices:", e.message);
+  }
+
 
   // Migration: rename staff to saleman
   try {
@@ -193,11 +285,20 @@ function initializeSchema(db) {
       console.log("Renamed table 'staff' to 'saleman'");
     }
 
-    // 2. Rename columns in saleman table
+    // 2. Ensure saleman table has salemanId column (migrate from legacy staff schema)
     if (tableList.includes("staff") || tableList.includes("saleman")) {
-      const salemanCols = db.prepare("PRAGMA table_info(saleman)").all().map(c => c.name);
+      const salemanCols = db.prepare("PRAGMA table_info(saleman)").all().map((c) => c.name);
+
+      // Legacy: rename staffId -> salemanId
       if (salemanCols.includes("staffId") && !salemanCols.includes("salemanId")) {
         db.exec("ALTER TABLE saleman RENAME COLUMN staffId TO salemanId");
+      }
+
+      // If salemanId column still does not exist (very old DB), add it
+      const updatedCols = db.prepare("PRAGMA table_info(saleman)").all().map((c) => c.name);
+      if (!updatedCols.includes("salemanId")) {
+        db.exec("ALTER TABLE saleman ADD COLUMN salemanId TEXT");
+        db.exec("CREATE INDEX IF NOT EXISTS idx_saleman_salemanId ON saleman(salemanId)");
       }
     }
 

@@ -23,7 +23,7 @@ export function SalemanPaymentForm({ salemen, recordSalemanPayment }) {
     const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
 
     return (
-        <form action={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <form action={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-end">
             <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
                 <span>Saleman</span>
                 <select
@@ -78,17 +78,14 @@ export function SalemanPaymentForm({ salemen, recordSalemanPayment }) {
                 defaultValue={new Date().toISOString().split("T")[0]}
             />
 
-            <div className="flex items-end gap-2">
-                <Input
-                    label="Notes"
-                    name="description"
-                    placeholder="Optional"
-                    className="flex-1"
-                />
-                <Button type="submit" disabled={loading}>
-                    {loading ? "Paying..." : "Pay"}
-                </Button>
-            </div>
+            <Input
+                label="Notes"
+                name="description"
+                placeholder="Optional"
+            />
+            <Button type="submit" disabled={loading} className="w-full h-9">
+                {loading ? "Paying..." : "Pay"}
+            </Button>
         </form>
     );
 }

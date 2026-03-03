@@ -35,7 +35,7 @@ export function PurchaseForm({ products, recordPurchase }) {
     }
 
     return (
-        <form action={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <form action={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
             <SearchableSelect
                 label="Product"
                 name="productId"
@@ -74,17 +74,14 @@ export function PurchaseForm({ products, recordPurchase }) {
                 defaultValue={new Date().toISOString().split("T")[0]}
             />
 
-            <div className="flex items-end gap-2">
-                <Input
-                    label="Supplier (Optional)"
-                    name="supplier"
-                    placeholder="Vendor name"
-                    className="flex-1"
-                />
-                <Button type="submit" disabled={loading}>
-                    {loading ? "Recording..." : "Stock In"}
-                </Button>
-            </div>
+            <Input
+                label="Supplier (Optional)"
+                name="supplier"
+                placeholder="Vendor name"
+            />
+            <Button type="submit" disabled={loading} className="w-full h-9">
+                {loading ? "Recording..." : "Stock In"}
+            </Button>
         </form>
     );
 }
