@@ -6,10 +6,18 @@ import { Shop } from "../src/models/Shop.js";
 import { RouteModel } from "../src/models/Route.js";
 import { User } from "../src/models/User.js";
 import { InvoiceCounter } from "../src/models/InvoiceCounter.js";
+import { Sale } from "../src/models/Sale.js";
+import { DailySalesSummary } from "../src/models/DailySalesSummary.js";
+import { CreditPayment } from "../src/models/CreditPayment.js";
+import { ReturnModel } from "../src/models/Return.js";
+import { Expense } from "../src/models/Expense.js";
+import { Purchase } from "../src/models/Purchase.js";
+import { SalemanPayment } from "../src/models/SalemanPayment.js";
+import { OrderTaker } from "../src/models/OrderTaker.js";
 import mongoose from "mongoose";
 
-// const DEFAULT_ADMIN_PASSWORD = "alrazaqtraders";
-const DEFAULT_ADMIN_PASSWORD = "Wao@123";
+const DEFAULT_ADMIN_PASSWORD = "alrazaqtraders";
+// const DEFAULT_ADMIN_PASSWORD = "Wao@123";
 
 const USER_ONLY = process.argv.includes("--user-only") || process.argv.includes("--only-user");
 const CLEAR_FIRST = process.argv.includes("--clear") || process.argv.includes("--delete");
@@ -34,6 +42,14 @@ async function clearData() {
     Shop.deleteMany({}),
     RouteModel.deleteMany({}),
     User.deleteMany({}),
+    Sale.deleteMany({}),
+    DailySalesSummary.deleteMany({}),
+    CreditPayment.deleteMany({}),
+    ReturnModel.deleteMany({}),
+    Expense.deleteMany({}),
+    Purchase.deleteMany({}),
+    SalemanPayment.deleteMany({}),
+    OrderTaker.deleteMany({}),
     InvoiceCounter.deleteMany({}),
   ]);
   console.log("Data cleared.");
@@ -123,95 +139,95 @@ async function main() {
     routes = await RouteModel.insertMany(
       isMongoDB()
         ? [
-            { userId: adminId, name: "Route A" },
-            { userId: adminId, name: "Route B" },
-          ]
+          { userId: adminId, name: "Route A" },
+          { userId: adminId, name: "Route B" },
+        ]
         : [
-            { name: "Route A" },
-            { name: "Route B" },
-          ]
+          { name: "Route A" },
+          { name: "Route B" },
+        ]
     );
 
     salesmen = await Saleman.insertMany(
       isMongoDB()
         ? [
-            {
-              userId: adminId,
-              name: "John Doe",
-              phone: "111-111-1111",
-              routeId: getId(routes[0]),
-              salemanId: "100001",
-            },
-            {
-              userId: adminId,
-              name: "Jane Smith",
-              phone: "222-222-2222",
-              routeId: getId(routes[1]),
-              salemanId: "100002",
-            },
-          ]
+          {
+            userId: adminId,
+            name: "John Doe",
+            phone: "111-111-1111",
+            routeId: getId(routes[0]),
+            salemanId: "100001",
+          },
+          {
+            userId: adminId,
+            name: "Jane Smith",
+            phone: "222-222-2222",
+            routeId: getId(routes[1]),
+            salemanId: "100002",
+          },
+        ]
         : [
-            {
-              name: "John Doe",
-              phone: "111-111-1111",
-              routeId: getId(routes[0]),
-              salemanId: "100001",
-            },
-            {
-              name: "Jane Smith",
-              phone: "222-222-2222",
-              routeId: getId(routes[1]),
-              salemanId: "100002",
-            },
-          ]
+          {
+            name: "John Doe",
+            phone: "111-111-1111",
+            routeId: getId(routes[0]),
+            salemanId: "100001",
+          },
+          {
+            name: "Jane Smith",
+            phone: "222-222-2222",
+            routeId: getId(routes[1]),
+            salemanId: "100002",
+          },
+        ]
     );
 
     shops = await Shop.insertMany(
       isMongoDB()
         ? [
-            {
-              userId: adminId,
-              name: "Alpha Store",
-              phone: "555-0001",
-              currentCredit: 0,
-              routeId: getId(routes[0]),
-            },
-            {
-              userId: adminId,
-              name: "Beta Market",
-              phone: "555-0002",
-              currentCredit: 0,
-              routeId: getId(routes[1]),
-            },
-          ]
+          {
+            userId: adminId,
+            name: "Alpha Store",
+            phone: "555-0001",
+            currentCredit: 0,
+            routeId: getId(routes[0]),
+          },
+          {
+            userId: adminId,
+            name: "Beta Market",
+            phone: "555-0002",
+            currentCredit: 0,
+            routeId: getId(routes[1]),
+          },
+        ]
         : [
-            {
-              name: "Alpha Store",
-              phone: "555-0001",
-              currentCredit: 0,
-              routeId: getId(routes[0]),
-            },
-            {
-              name: "Beta Market",
-              phone: "555-0002",
-              currentCredit: 0,
-              routeId: getId(routes[1]),
-            },
-          ]
+          {
+            name: "Alpha Store",
+            phone: "555-0001",
+            currentCredit: 0,
+            routeId: getId(routes[0]),
+          },
+          {
+            name: "Beta Market",
+            phone: "555-0002",
+            currentCredit: 0,
+            routeId: getId(routes[1]),
+          },
+        ]
     );
 
     products = await Product.insertMany(
       isMongoDB()
         ? [
-            { userId: adminId, name: "Product A", sku: "PA-001", unit: "pcs", price: 10 },
-            { userId: adminId, name: "Product B", sku: "PB-001", unit: "box", price: 25 },
-            { userId: adminId, name: "Product C", sku: "PC-001", unit: "kg", price: 5 },
-          ]
+          { userId: adminId, name: "Product A", sku: "PA-001", unit: "pcs", price: 10 },
+          { userId: adminId, name: "Product B", sku: "PB-001", unit: "box", price: 25 },
+          { userId: adminId, name: "Product C", sku: "PC-001", unit: "kg", price: 5 },
+        ]
         : [
-            { name: "Product A", sku: "PA-001", unit: "pcs", price: 10 },
-            { name: "Product B", sku: "PB-001", unit: "box", price: 25 },
-            { name: "Product C", sku: "PC-001", unit: "kg", price: 5 },
-          ]
+          { name: "Product A", sku: "PA-001", unit: "pcs", price: 10 },
+          { name: "Product B", sku: "PB-001", unit: "box", price: 25 },
+          { name: "Product C", sku: "PC-001", unit: "kg", price: 5 },
+        ]
     );
   }
 
