@@ -49,3 +49,5 @@ next-env.d.ts
 debug.log
 
 config.bat
+graphify-out
+.graphify-python

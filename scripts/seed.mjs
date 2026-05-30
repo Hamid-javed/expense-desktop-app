@@ -16,8 +16,8 @@ import { SalemanPayment } from "../src/models/SalemanPayment.js";
 import { OrderTaker } from "../src/models/OrderTaker.js";
 import mongoose from "mongoose";
 
-const DEFAULT_ADMIN_PASSWORD = "alrazaqtraders";
-// const DEFAULT_ADMIN_PASSWORD = "Wao@123";
+// const DEFAULT_ADMIN_PASSWORD = "alrazaqtraders";
+const DEFAULT_ADMIN_PASSWORD = "Wao@123";
 
 const USER_ONLY = process.argv.includes("--user-only") || process.argv.includes("--only-user");
 const CLEAR_FIRST = process.argv.includes("--clear") || process.argv.includes("--delete");
@@ -79,8 +79,8 @@ async function seedUserOnly() {
 
   const passwordHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
   const admin = await User.findOneAndUpdate(
-    { email: "admin@alrazaqtraders.com" },
-    { email: "admin@alrazaqtraders.com", name: "Al Razaq Traders", passwordHash },
+    { email: "hamid@gmail.com" },
+    { email: "hamid@gmail.com", name: "Hamid Traders", passwordHash },
     { upsert: true, new: true }
   );
 
