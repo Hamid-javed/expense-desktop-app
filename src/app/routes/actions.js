@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { connectToDatabase } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { RouteModel } from "../../models/Route";
@@ -16,7 +16,7 @@ export async function createRoute(formData) {
       return { error: "Name is required" };
     }
 
-    await RouteModel.create(isMongoDB() ? { userId, name } : { name });
+    await RouteModel.create({ userId, name });
     revalidatePath("/routes");
     return { success: true };
   } catch (error) {
@@ -59,6 +59,7 @@ export async function updateRoute(formData) {
 
 export async function deleteRoute(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const routeId = formData.get("id")?.trim();
 

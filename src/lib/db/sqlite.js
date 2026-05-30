@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
+import bcrypt from "bcryptjs";
 
 let dbInstance = null;
 
@@ -23,6 +24,7 @@ export function connectSQLite(dbPath) {
 
   // Initialize schema
   initializeSchema(dbInstance);
+  seedDefaultAdmin(dbInstance);
 
   return dbInstance;
 }
@@ -376,6 +378,34 @@ function initializeSchema(db) {
     }
   }
 
+  // Assign existing NULL-userId rows to the first admin user (handles DB upgrades).
+  // New installs have no rows yet, so this is a no-op on fresh DBs.
+  try {
+    const firstAdmin = db.prepare(
+      "SELECT id FROM users WHERE deletedAt IS NULL ORDER BY id ASC LIMIT 1"
+    ).get();
+    if (firstAdmin) {
+      const adminId = String(firstAdmin.id);
+      for (const table of tablesWithUserId) {
+        try {
+          db.exec(`UPDATE ${table} SET userId = '${adminId}' WHERE userId IS NULL`);
+        } catch (e) {
+          // Table may not exist yet
+        }
+      }
+      // Also fix expenses, product_purchases, saleman_payments which store userId already
+      for (const table of ["expenses", "product_purchases", "saleman_payments"]) {
+        try {
+          db.exec(`UPDATE ${table} SET userId = '${adminId}' WHERE userId IS NULL`);
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+  } catch (e) {
+    // Users table may not exist yet on very first run
+  }
+
   // Daily Sales Summary table
   db.exec(`
     CREATE TABLE IF NOT EXISTS daily_sales_summaries (
@@ -502,6 +532,20 @@ function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_saleman_payments_date ON saleman_payments(date);
     CREATE INDEX IF NOT EXISTS idx_saleman_payments_deleted ON saleman_payments(deletedAt);
   `);
+}
+
+/**
+ * Create default admin account if no users exist (fresh install).
+ */
+function seedDefaultAdmin(db) {
+  const row = db.prepare("SELECT COUNT(*) as count FROM users").get();
+  if (row.count > 0) return;
+  const hash = bcrypt.hashSync("admin123", 10);
+  const now = Date.now();
+  db.prepare(
+    `INSERT INTO users (email, name, passwordHash, role, isActive, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, 1, ?, ?)`
+  ).run("admin@gmail.com", "Admin", hash, "admin", now, now);
 }
 
 /**

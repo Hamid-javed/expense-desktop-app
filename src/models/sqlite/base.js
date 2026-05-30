@@ -79,6 +79,10 @@ export class SQLiteModel {
     const params = [];
 
     // Handle query conditions
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
     if (query._id) {
       sql += ` AND id = ?`;
       params.push(query._id);
@@ -101,6 +105,10 @@ export class SQLiteModel {
     let sql = `SELECT * FROM ${this.tableName} WHERE deletedAt IS NULL`;
     const params = [];
 
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
     if (query._id) {
       sql += ` AND id = ?`;
       params.push(query._id);
@@ -460,6 +468,11 @@ export class SQLiteModel {
 
         if (match.deletedAt === null || match.deletedAt === undefined) {
           whereConditions.push("deletedAt IS NULL");
+        }
+
+        if (match.userId !== undefined) {
+          whereConditions.push(`userId = ?`);
+          params.push(match.userId);
         }
 
         if (match.date) {

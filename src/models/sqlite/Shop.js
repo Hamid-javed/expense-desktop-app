@@ -11,6 +11,10 @@ class ShopModel extends SQLiteModel {
     let sql = `SELECT * FROM ${this.tableName} WHERE deletedAt IS NULL`;
     const params = [];
 
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
     if (query._id) {
       sql += ` AND id = ?`;
       params.push(query._id);
@@ -34,6 +38,10 @@ class ShopModel extends SQLiteModel {
     let sql = `SELECT * FROM ${this.tableName} WHERE deletedAt IS NULL`;
     const params = [];
 
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
     if (query._id) {
       sql += ` AND id = ?`;
       params.push(query._id);

@@ -52,6 +52,10 @@ class SaleModel extends SQLiteModel {
     let sql = `SELECT * FROM ${this.tableName} WHERE deletedAt IS NULL`;
     const params = [];
 
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
     if (query._id) {
       sql += ` AND id = ?`;
       params.push(query._id);
@@ -91,7 +95,6 @@ class SaleModel extends SQLiteModel {
           params.push(end);
         }
       } else {
-        // Direct date value
         const dateValue = query.date instanceof Date ? query.date.getTime() : query.date;
         sql += ` AND date = ?`;
         params.push(dateValue);
@@ -135,7 +138,6 @@ class SaleModel extends SQLiteModel {
 
     const rows = db.prepare(sql).all(...params);
     const results = rows.map((row) => this.rowToObject(row));
-    // Return query wrapper for chaining
     return new SQLiteQuery(this, query, results);
   }
 
@@ -144,6 +146,10 @@ class SaleModel extends SQLiteModel {
     let sql = `SELECT * FROM ${this.tableName} WHERE deletedAt IS NULL`;
     const params = [];
 
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
     if (query._id) {
       sql += ` AND id = ?`;
       params.push(query._id);
@@ -190,7 +196,6 @@ class SaleModel extends SQLiteModel {
           params.push(end);
         }
       } else {
-        // Direct date value
         const dateValue = query.date instanceof Date ? query.date.getTime() : query.date;
         sql += ` AND date = ?`;
         params.push(dateValue);
@@ -200,7 +205,6 @@ class SaleModel extends SQLiteModel {
     sql += ` LIMIT 1`;
     const row = db.prepare(sql).get(...params);
     const result = this.rowToObject(row);
-    // Return query wrapper for chaining (base class would do this, but we override)
     return new SQLiteQuery(this, query, result);
   }
 }

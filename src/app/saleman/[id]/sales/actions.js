@@ -1,6 +1,6 @@
 "use server";
 
-import { connectToDatabase, isMongoDB } from "../../../../lib/db";
+import { connectToDatabase } from "../../../../lib/db";
 import { requireUserId } from "../../../../lib/auth";
 import { withUserId } from "../../../../lib/tenant";
 import { DailySalesSummary } from "../../../../models/DailySalesSummary";
@@ -75,24 +75,15 @@ export async function upsertDailySalesSummary(formData) {
         date: startOfDay,
         deletedAt: null,
       }),
-      isMongoDB()
-        ? {
-          userId,
-          salemanId: validated.salemanId,
-          date: startOfDay,
-          cashSales: validated.cashSales,
-          creditSales: validated.creditSales,
-          isActive: true,
-          deletedAt: null,
-        }
-        : {
-          salemanId: validated.salemanId,
-          date: startOfDay,
-          cashSales: validated.cashSales,
-          creditSales: validated.creditSales,
-          isActive: true,
-          deletedAt: null,
-        },
+      {
+        userId,
+        salemanId: validated.salemanId,
+        date: startOfDay,
+        cashSales: validated.cashSales,
+        creditSales: validated.creditSales,
+        isActive: true,
+        deletedAt: null,
+      },
       {
         upsert: true,
         new: true,

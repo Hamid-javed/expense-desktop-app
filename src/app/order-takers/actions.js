@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { connectToDatabase } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { OrderTaker } from "../../models/OrderTaker";
@@ -22,7 +22,7 @@ export async function createOrderTaker(formData) {
     }
 
     const otData = { name, number, cnic: cnic || undefined };
-    await OrderTaker.create(isMongoDB() ? { userId, ...otData } : otData);
+    await OrderTaker.create({ userId, ...otData });
     revalidatePath("/order-takers");
     revalidatePath("/sales");
     return { success: true };
@@ -74,6 +74,7 @@ export async function updateOrderTaker(formData) {
 
 export async function deleteOrderTaker(formData) {
   try {
+    const userId = await requireUserId();
     await connectToDatabase();
     const id = formData.get("id")?.trim();
 

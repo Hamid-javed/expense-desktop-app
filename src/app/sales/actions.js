@@ -31,16 +31,12 @@ const saleSchema = z.object({
 });
 
 async function getNextInvoiceNumber(userId) {
-  if (isMongoDB()) {
-    const counter = await InvoiceCounter.findOneAndUpdate(
-      { userId, key: "invoice" },
-      { $inc: { lastNumber: 1 } },
-      { new: true, upsert: true }
-    );
-    return counter.lastNumber;
-  }
+  // Use user-namespaced key for SQLite so each user has their own counter sequence.
+  // MongoDB uses userId field on the document instead.
+  const key = isMongoDB() ? "invoice" : `${userId}:invoice`;
+  const query = isMongoDB() ? { userId, key } : { key };
   const counter = await InvoiceCounter.findOneAndUpdate(
-    { key: "invoice" },
+    query,
     { $inc: { lastNumber: 1 } },
     { new: true, upsert: true }
   );
@@ -238,7 +234,7 @@ export async function createSale(formData) {
       const saleId = existingSale._id || existingSale.id;
 
       // Update the sale using SQLite-compatible method (include order taker from form)
-      const saleFilter = isMongoDB() ? { _id: saleId, userId } : { _id: saleId };
+      const saleFilter = { _id: saleId, userId };
       sale = await Sale.findOneAndUpdate(
         saleFilter,
         {
@@ -272,7 +268,7 @@ export async function createSale(formData) {
         cashCollected,
         creditRemaining,
       };
-      sale = await Sale.create(isMongoDB() ? { userId, ...saleData } : saleData);
+      sale = await Sale.create({ userId, ...saleData });
 
       // Track all product updates for new sale
       productUpdates = itemsWithTotals.map((it) => ({
@@ -352,7 +348,7 @@ export async function updateSaleCashCredit(formData) {
     }
 
     const saleIdValue = sale._id || sale.id;
-    const saleFilter = isMongoDB() ? { _id: saleIdValue, userId } : { _id: saleIdValue };
+    const saleFilter = { _id: saleIdValue, userId };
     await Sale.findOneAndUpdate(saleFilter, {
       cashCollected,
       creditRemaining,
@@ -407,7 +403,7 @@ export async function toggleSaleStatus(formData) {
       updateData.creditRemaining = 0;
     }
 
-    const saleFilter = isMongoDB() ? { _id: saleIdValue, userId } : { _id: saleIdValue };
+    const saleFilter = { _id: saleIdValue, userId };
     await Sale.findOneAndUpdate(saleFilter, updateData);
 
     if (shopId) {

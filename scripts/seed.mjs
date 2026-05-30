@@ -152,114 +152,60 @@ async function main() {
   let products = [];
 
   if (DEMO_DATA) {
-    routes = await RouteModel.insertMany(
-      isMongoDB()
-        ? [
-          { userId: adminId, name: "Route A" },
-          { userId: adminId, name: "Route B" },
-        ]
-        : [
-          { name: "Route A" },
-          { name: "Route B" },
-        ]
-    );
+    routes = await RouteModel.insertMany([
+      { userId: adminIdStr, name: "Route A" },
+      { userId: adminIdStr, name: "Route B" },
+    ]);
 
-    salesmen = await Saleman.insertMany(
-      isMongoDB()
-        ? [
-          {
-            userId: adminId,
-            name: "John Doe",
-            phone: "111-111-1111",
-            routeId: getId(routes[0]),
-            salemanId: "100001",
-          },
-          {
-            userId: adminId,
-            name: "Jane Smith",
-            phone: "222-222-2222",
-            routeId: getId(routes[1]),
-            salemanId: "100002",
-          },
-        ]
-        : [
-          {
-            name: "John Doe",
-            phone: "111-111-1111",
-            routeId: getId(routes[0]),
-            salemanId: "100001",
-          },
-          {
-            name: "Jane Smith",
-            phone: "222-222-2222",
-            routeId: getId(routes[1]),
-            salemanId: "100002",
-          },
-        ]
-    );
+    salesmen = await Saleman.insertMany([
+      {
+        userId: adminIdStr,
+        name: "John Doe",
+        phone: "111-111-1111",
+        routeId: getId(routes[0]),
+        salemanId: "100001",
+      },
+      {
+        userId: adminIdStr,
+        name: "Jane Smith",
+        phone: "222-222-2222",
+        routeId: getId(routes[1]),
+        salemanId: "100002",
+      },
+    ]);
 
-    shops = await Shop.insertMany(
-      isMongoDB()
-        ? [
-          {
-            userId: adminId,
-            name: "Alpha Store",
-            phone: "555-0001",
-            currentCredit: 0,
-            routeId: getId(routes[0]),
-          },
-          {
-            userId: adminId,
-            name: "Beta Market",
-            phone: "555-0002",
-            currentCredit: 0,
-            routeId: getId(routes[1]),
-          },
-        ]
-        : [
-          {
-            name: "Alpha Store",
-            phone: "555-0001",
-            currentCredit: 0,
-            routeId: getId(routes[0]),
-          },
-          {
-            name: "Beta Market",
-            phone: "555-0002",
-            currentCredit: 0,
-            routeId: getId(routes[1]),
-          },
-        ]
-    );
+    shops = await Shop.insertMany([
+      {
+        userId: adminIdStr,
+        name: "Alpha Store",
+        phone: "555-0001",
+        currentCredit: 0,
+        routeId: getId(routes[0]),
+      },
+      {
+        userId: adminIdStr,
+        name: "Beta Market",
+        phone: "555-0002",
+        currentCredit: 0,
+        routeId: getId(routes[1]),
+      },
+    ]);
 
-    products = await Product.insertMany(
-      isMongoDB()
-        ? [
-          { userId: adminId, name: "Product A", sku: "PA-001", unit: "pcs", price: 10 },
-          { userId: adminId, name: "Product B", sku: "PB-001", unit: "box", price: 25 },
-          { userId: adminId, name: "Product C", sku: "PC-001", unit: "kg", price: 5 },
-        ]
-        : [
-          { name: "Product A", sku: "PA-001", unit: "pcs", price: 10 },
-          { name: "Product B", sku: "PB-001", unit: "box", price: 25 },
-          { name: "Product C", sku: "PC-001", unit: "kg", price: 5 },
-        ]
-    );
+    products = await Product.insertMany([
+      { userId: adminIdStr, name: "Product A", sku: "PA-001", unit: "pcs", price: 10, buyPrice: 0, quantity: 100, totalBought: 100 },
+      { userId: adminIdStr, name: "Product B", sku: "PB-001", unit: "box", price: 25, buyPrice: 0, quantity: 50, totalBought: 50 },
+      { userId: adminIdStr, name: "Product C", sku: "PC-001", unit: "kg", price: 5, buyPrice: 0, quantity: 200, totalBought: 200 },
+    ]);
   }
 
-  if (isMongoDB()) {
-    await InvoiceCounter.findOneAndUpdate(
-      { userId: adminId, key: "invoice" },
-      { $setOnInsert: { userId: adminId, key: "invoice", lastNumber: 0 } },
-      { upsert: true }
-    );
-  } else {
-    await InvoiceCounter.findOneAndUpdate(
-      { key: "invoice" },
-      { $setOnInsert: { key: "invoice", lastNumber: 0 } },
-      { upsert: true }
-    );
-  }
+  // Invoice counter: use namespaced key for SQLite (same pattern as the app)
+  const counterKey = isMongoDB() ? "invoice" : `${adminIdStr}:invoice`;
+  const counterQuery = isMongoDB() ? { userId: adminId, key: counterKey } : { key: counterKey };
+  await InvoiceCounter.findOneAndUpdate(
+    counterQuery,
+    { $setOnInsert: { key: counterKey, lastNumber: 0 } },
+    { upsert: true }
+  );
 
   console.log("Seed complete.");
   console.log({

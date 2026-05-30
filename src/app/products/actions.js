@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { connectToDatabase } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { Product } from "../../models/Product";
@@ -47,7 +47,7 @@ export async function createProduct(formData) {
       quantity: 0, // default
       totalBought: 0, // default
     };
-    await Product.create(isMongoDB() ? { userId, ...productData } : productData);
+    await Product.create({ userId, ...productData });
 
     revalidatePath("/products");
     return { success: true };

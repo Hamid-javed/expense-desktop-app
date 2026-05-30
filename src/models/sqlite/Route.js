@@ -11,6 +11,11 @@ class RouteModelClass extends SQLiteModel {
     let sql = `SELECT * FROM ${this.tableName} WHERE deletedAt IS NULL`;
     const params = [];
 
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
+
     // Handle MongoDB-style $ne operator
     if (query._id && typeof query._id === 'object' && query._id.$ne !== undefined) {
       sql += ` AND id != ?`;
@@ -43,6 +48,10 @@ class RouteModelClass extends SQLiteModel {
     let sql = `SELECT * FROM ${this.tableName} WHERE deletedAt IS NULL`;
     const params = [];
 
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
     if (query._id) {
       sql += ` AND id = ?`;
       params.push(query._id);

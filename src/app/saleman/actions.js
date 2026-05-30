@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { connectToDatabase } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { Saleman as SalemanModel } from "../../models/Saleman";
@@ -50,7 +50,7 @@ export async function createSaleman(formData) {
       routeId: routeId || undefined,
       salemanId,
     };
-    const saleman = await SalemanModel.create(isMongoDB() ? { userId, ...salemanData } : salemanData);
+    const saleman = await SalemanModel.create({ userId, ...salemanData });
 
     // If a route was selected during creation, keep route <-> saleman in sync
     if (routeId) {

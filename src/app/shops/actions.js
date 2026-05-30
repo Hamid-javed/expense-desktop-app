@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { connectToDatabase, isMongoDB } from "../../lib/db";
+import { connectToDatabase } from "../../lib/db";
 import { requireUserId } from "../../lib/auth";
 import { withUserId } from "../../lib/tenant";
 import { Shop } from "../../models/Shop";
@@ -48,7 +48,7 @@ export async function createShop(formData) {
       cnic: cnic || undefined,
       routeId: routeId || undefined,
     };
-    await Shop.create(isMongoDB() ? { userId, ...shopData } : shopData);
+    await Shop.create({ userId, ...shopData });
 
     revalidatePath("/shops");
     return { success: true };

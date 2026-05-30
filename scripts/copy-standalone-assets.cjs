@@ -39,3 +39,22 @@ if (fs.existsSync(staticDir)) {
   copyRecursive(staticDir, standaloneStatic);
   console.log('Copied .next/static to .next/standalone/.next/static');
 }
+
+// Copy external packages that Next.js standalone may not trace automatically
+const nativeModules = ['better-sqlite3', 'bcryptjs', 'mongoose', 'mongodb'];
+for (const mod of nativeModules) {
+  const src = path.join(root, 'node_modules', mod);
+  const dest = path.join(standaloneDir, 'node_modules', mod);
+  if (fs.existsSync(src)) {
+    copyRecursive(src, dest);
+    console.log(`Copied node_modules/${mod} to standalone`);
+  }
+}
+
+// Copy .env into standalone so the server reads correct DB_TYPE / SESSION_SECRET
+const envSrc = path.join(root, '.env');
+const envDest = path.join(standaloneDir, '.env');
+if (fs.existsSync(envSrc)) {
+  fs.copyFileSync(envSrc, envDest);
+  console.log('Copied .env to .next/standalone/.env');
+}

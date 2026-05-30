@@ -42,23 +42,18 @@ class InvoiceCounterModel extends SQLiteModel {
     const db = this.getDB();
     let sql = `SELECT * FROM ${this.tableName}`;
     const params = [];
+    const conditions = [];
 
-    // Handle query conditions
     if (query._id) {
-      sql += ` WHERE id = ?`;
+      conditions.push(`id = ?`);
       params.push(query._id);
-    } else if (query.key) {
-      sql += ` WHERE key = ?`;
+    } else if (query.key !== undefined) {
+      conditions.push(`key = ?`);
       params.push(query.key);
-    } else if (Object.keys(query).length > 0) {
-      const conditions = [];
-      for (const [key, value] of Object.entries(query)) {
-        conditions.push(`${key} = ?`);
-        params.push(value);
-      }
-      if (conditions.length > 0) {
-        sql += ` WHERE ${conditions.join(" AND ")}`;
-      }
+    }
+
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(" AND ")}`;
     }
 
     const rows = db.prepare(sql).all(...params);
@@ -70,13 +65,18 @@ class InvoiceCounterModel extends SQLiteModel {
     const db = this.getDB();
     let sql = `SELECT * FROM ${this.tableName}`;
     const params = [];
+    const conditions = [];
 
-    if (query.key) {
-      sql += ` WHERE key = ?`;
+    if (query.key !== undefined) {
+      conditions.push(`key = ?`);
       params.push(query.key);
     } else if (query._id || query.id) {
-      sql += ` WHERE id = ?`;
+      conditions.push(`id = ?`);
       params.push(query._id || query.id);
+    }
+
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(" AND ")}`;
     }
 
     sql += ` LIMIT 1`;

@@ -11,6 +11,11 @@ class ProductModel extends SQLiteModel {
     let sql = `SELECT * FROM ${this.tableName} WHERE deletedAt IS NULL`;
     const params = [];
 
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
+
     // Handle MongoDB-style $in operator
     if (query._id && typeof query._id === 'object' && query._id.$in) {
       const ids = Array.isArray(query._id.$in) ? query._id.$in : [query._id.$in];
@@ -19,14 +24,13 @@ class ProductModel extends SQLiteModel {
         sql += ` AND id IN (${placeholders})`;
         params.push(...ids);
       } else {
-        // Empty $in means no results
-        sql += ` AND 1 = 0`; // Always false condition
+        sql += ` AND 1 = 0`;
       }
     } else if (query._id) {
       sql += ` AND id = ?`;
       params.push(query._id);
     }
-    
+
     if (query.isActive !== undefined) {
       sql += ` AND isActive = ?`;
       params.push(query.isActive ? 1 : 0);
@@ -46,6 +50,10 @@ class ProductModel extends SQLiteModel {
     let sql = `SELECT * FROM ${this.tableName} WHERE deletedAt IS NULL`;
     const params = [];
 
+    if (query.userId !== undefined) {
+      sql += ` AND userId = ?`;
+      params.push(query.userId);
+    }
     if (query._id) {
       sql += ` AND id = ?`;
       params.push(query._id);

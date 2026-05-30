@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { connectToDatabase, isMongoDB } from "../../../lib/db";
+import { connectToDatabase } from "../../../lib/db";
 import { requireUserId } from "../../../lib/auth";
 import { withUserId } from "../../../lib/tenant";
 import { Sale } from "../../../models/Sale";
@@ -58,11 +58,11 @@ export async function createReturn(formData) {
     const returnAmount = quantity * effectivePrice;
 
     const returnData = {
+      userId,
       saleId: sale._id ?? sale.id,
       productId,
       quantity,
       reason: reason || undefined,
-      ...(isMongoDB() && { userId }),
     };
     await ReturnModel.create(returnData);
 
