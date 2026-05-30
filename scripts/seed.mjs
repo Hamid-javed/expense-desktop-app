@@ -23,6 +23,10 @@ const USER_ONLY = process.argv.includes("--user-only") || process.argv.includes(
 const CLEAR_FIRST = process.argv.includes("--clear") || process.argv.includes("--delete");
 const DEMO_DATA = process.argv.includes("--demo") || process.argv.includes("--with-demo");
 
+// Very simple production safety: require explicit override to allow destructive seed
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const ALLOW_PROD_SEED = process.env.ALLOW_PROD_SEED === "true";
+
 // Helper to get ID (handles both MongoDB _id and SQLite id)
 function getId(obj) {
   return obj._id || obj.id;
@@ -34,6 +38,12 @@ function getIdString(obj) {
 }
 
 async function clearData() {
+  if (IS_PRODUCTION && !ALLOW_PROD_SEED) {
+    console.error(
+      "Refusing to clear data in production. Set ALLOW_PROD_SEED=true to override (NOT recommended on real data)."
+    );
+    process.exit(1);
+  }
   await connectToDatabase();
   console.log("Clearing existing data...");
   await Promise.all([
@@ -56,6 +66,12 @@ async function clearData() {
 }
 
 async function seedUserOnly() {
+  if (IS_PRODUCTION && !ALLOW_PROD_SEED) {
+    console.error(
+      "Refusing to run user-only seed in production. Set ALLOW_PROD_SEED=true to override (NOT recommended on real data)."
+    );
+    process.exit(1);
+  }
   await connectToDatabase();
 
   const dbType = isMongoDB() ? "MongoDB" : "SQLite";
