@@ -71,14 +71,17 @@ export async function GET(req) {
       sale.salemanId?.name || "-",
       sale.totalAmount ?? 0,
       sale.cashCollected ?? 0,
-      sale.creditRemaining ?? 0,
+      Math.max(0, (sale.totalAmount ?? 0) - (sale.cashCollected ?? 0)),
       getStatusValue(sale),
     ]),
   ];
 
   const subtotalAmount = sales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
   const subtotalCash = sales.reduce((sum, s) => sum + (s.cashCollected ?? 0), 0);
-  const subtotalCredit = sales.reduce((sum, s) => sum + (s.creditRemaining ?? 0), 0);
+  const subtotalCredit = sales.reduce(
+    (sum, s) => sum + Math.max(0, (s.totalAmount ?? 0) - (s.cashCollected ?? 0)),
+    0
+  );
   rows.push(["", "", "", "Subtotal", subtotalAmount, subtotalCash, subtotalCredit, ""]);
 
   const ws = XLSX.utils.aoa_to_sheet(rows);

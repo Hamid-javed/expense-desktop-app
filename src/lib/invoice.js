@@ -371,7 +371,7 @@ export async function generateShopInvoicesListingPdf(shop, sales, { dateRangeLab
     const discount = sale.totalDiscount ?? 0;
     const amount = sale.totalAmount ?? 0;
     const cash = sale.cashCollected ?? 0;
-    const credit = sale.creditRemaining ?? 0;
+    const credit = Math.max(0, amount - cash); // Credit = uncollected remainder
     const status = (sale.status || "unpaid").toUpperCase();
 
     grandDiscount += discount;

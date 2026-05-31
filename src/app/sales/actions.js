@@ -140,7 +140,6 @@ export async function createSale(formData) {
     let sale;
     let invoiceId;
     let productUpdates = [];
-    let creditUpdate = 0;
 
     if (existingSale) {
       // Merge with existing sale
@@ -154,19 +153,23 @@ export async function createSale(formData) {
           // If product already exists, merge quantities
           const existing = existingItemsMap.get(productIdStr);
           const oldQty = existing.quantity;
-          const oldDisc = existing.discount || 0;
           const newQty = item.quantity;
-          const newDisc = item.discount || 0;
+          const total = oldQty + newQty;
 
-          existing.quantity = oldQty + newQty;
-          // Calculate weighted average for per-unit discount
+          // Weighted averages so per-unit price/discount/buyPrice stay correct
           existing.discount =
-            (oldQty * oldDisc + newQty * newDisc) / existing.quantity;
+            (oldQty * (existing.discount || 0) + newQty * (item.discount || 0)) / total;
+          existing.price =
+            (oldQty * (existing.price || 0) + newQty * (item.price || 0)) / total;
+          existing.buyPrice =
+            (oldQty * (existing.buyPrice || 0) + newQty * (item.buyPrice || 0)) / total;
+          existing.quantity = total;
           existing.lineTotal = existing.quantity * (existing.price - existing.discount);
         } else {
           existingItemsMap.set(productIdStr, {
             productId: item.productId,
             quantity: item.quantity,
+            buyPrice: item.buyPrice || 0, // Preserve cost basis for COGS
             price: item.price,
             discount: item.discount || 0,
             lineTotal: item.lineTotal,
@@ -181,14 +184,17 @@ export async function createSale(formData) {
           // Same product: add quantities
           const existing = existingItemsMap.get(productIdStr);
           const oldQty = existing.quantity;
-          const oldDisc = existing.discount || 0;
           const newQty = newItem.quantity;
-          const newDisc = newItem.discount || 0;
+          const total = oldQty + newQty;
 
-          existing.quantity = oldQty + newQty;
-          // Calculate weighted average for per-unit discount
+          // Weighted averages so per-unit price/discount/buyPrice stay correct
           existing.discount =
-            (oldQty * oldDisc + newQty * newDisc) / existing.quantity;
+            (oldQty * (existing.discount || 0) + newQty * (newItem.discount || 0)) / total;
+          existing.price =
+            (oldQty * (existing.price || 0) + newQty * (newItem.price || 0)) / total;
+          existing.buyPrice =
+            (oldQty * (existing.buyPrice || 0) + newQty * (newItem.buyPrice || 0)) / total;
+          existing.quantity = total;
           existing.lineTotal = existing.quantity * (existing.price - existing.discount);
 
           // Track product updates (only for the new quantity)
@@ -221,14 +227,11 @@ export async function createSale(formData) {
         0
       );
 
-      // Calculate credit update (only for new amount if payment type is credit)
-      if (data.paymentType === "credit") {
-        creditUpdate = newTotalAmount; // Add new credit amount
-      }
-
-      // Update existing sale: set cash/credit for merged total from new payment
+      // Cash collected from this batch only (credit batches collect nothing now)
       const newCash = data.paymentType === "cash" ? newTotalAmount : 0;
-      const newCredit = data.paymentType === "credit" ? newTotalAmount : 0;
+      const mergedCash = (existingSale.cashCollected ?? 0) + newCash;
+      // Credit is always derived: whatever of the merged total is not yet collected
+      const mergedCredit = Math.max(0, mergedTotalAmount - mergedCash);
 
       // Get the sale ID (handle both MongoDB _id and SQLite id)
       const saleId = existingSale._id || existingSale.id;
@@ -241,8 +244,8 @@ export async function createSale(formData) {
           items: mergedItems,
           totalDiscount: mergedTotalDiscount,
           totalAmount: mergedTotalAmount,
-          cashCollected: (existingSale.cashCollected ?? 0) + newCash,
-          creditRemaining: (existingSale.creditRemaining ?? 0) + newCredit,
+          cashCollected: mergedCash,
+          creditRemaining: mergedCredit,
           orderTakerId: data.orderTakerId,
           orderTakeDate,
         }
@@ -251,9 +254,10 @@ export async function createSale(formData) {
       // Create new sale
       invoiceId = await getNextInvoiceNumber(userId);
 
-      // Always set to 0 by default - user can update via Cash & Credit form
-      const cashCollected = 0;
-      const creditRemaining = 0;
+      // Initialise from payment type: cash sales are fully collected,
+      // credit sales are fully outstanding. Credit = total - cash always.
+      const cashCollected = data.paymentType === "cash" ? newTotalAmount : 0;
+      const creditRemaining = Math.max(0, newTotalAmount - cashCollected);
       const saleData = {
         invoiceId,
         date,
@@ -277,11 +281,6 @@ export async function createSale(formData) {
         revenueChange: it.lineTotal,
         oldQuantity: 0,
       }));
-
-      // Calculate credit update
-      if (data.paymentType === "credit") {
-        creditUpdate = newTotalAmount;
-      }
     }
 
     // Note: currentCredit is now managed manually from the shop page only
@@ -321,16 +320,12 @@ export async function updateSaleCashCredit(formData) {
     const saleId = formData.get("saleId")?.trim();
     const shopId = formData.get("shopId")?.trim();
     const cashCollected = Number(formData.get("cashCollected"));
-    const creditRemaining = Number(formData.get("creditRemaining"));
 
     if (!saleId) {
       return { error: "Missing sale id" };
     }
     if (Number.isNaN(cashCollected) || cashCollected < 0) {
       return { error: "Cash collected must be a non-negative number." };
-    }
-    if (Number.isNaN(creditRemaining) || creditRemaining < 0) {
-      return { error: "Credit remaining must be a non-negative number." };
     }
 
     const sale = await Sale.findOne(
@@ -341,11 +336,14 @@ export async function updateSaleCashCredit(formData) {
     }
 
     const total = sale.totalAmount ?? 0;
-    if (cashCollected + creditRemaining > total) {
+    if (cashCollected > total) {
       return {
-        error: `Cash + credit (${(cashCollected + creditRemaining).toFixed(2)}) cannot exceed invoice total (${total.toFixed(2)}).`,
+        error: `Cash collected (${cashCollected.toFixed(2)}) cannot exceed invoice total (${total.toFixed(2)}).`,
       };
     }
+
+    // Credit is always the uncollected remainder of the invoice total.
+    const creditRemaining = Math.max(0, total - cashCollected);
 
     const saleIdValue = sale._id || sale.id;
     const saleFilter = { _id: saleIdValue, userId };

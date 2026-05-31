@@ -19,12 +19,15 @@ export function SaleCashCreditForm({
   shopId,
   totalAmount,
   cashCollected = 0,
-  creditRemaining = 0,
 }) {
   const [error, setError] = useState(null);
+  const [cash, setCash] = useState(cashCollected);
 
   const formatAmount = (n) =>
     (n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+  const cashNum = Number(cash) || 0;
+  const derivedCredit = Math.max(0, (totalAmount ?? 0) - cashNum);
 
   return (
     <form
@@ -43,7 +46,7 @@ export function SaleCashCreditForm({
         Cash &amp; Credit (invoice total: {formatAmount(totalAmount)})
       </h4>
       <p className="mb-3 text-xs text-slate-500">
-        Split this invoice into cash collected and credit remaining. They should not exceed the total.
+        Enter cash collected. Credit remaining is the rest of the invoice total and updates automatically.
       </p>
       {error && (
         <p className="mb-2 text-xs text-red-600" role="alert">
@@ -57,22 +60,19 @@ export function SaleCashCreditForm({
             type="number"
             name="cashCollected"
             min="0"
+            max={totalAmount}
             step="0.01"
-            defaultValue={cashCollected}
+            value={cash}
+            onChange={(e) => setCash(e.target.value)}
             className="h-8 w-32 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-slate-600">Credit remaining</span>
-          <input
-            type="number"
-            name="creditRemaining"
-            min="0"
-            step="0.01"
-            defaultValue={creditRemaining}
-            className="h-8 w-32 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900"
-          />
-        </label>
+          <div className="flex h-8 w-32 items-center rounded-md border border-slate-200 bg-slate-100 px-2 text-sm font-medium text-slate-700">
+            {formatAmount(derivedCredit)}
+          </div>
+        </div>
         <SubmitButton />
       </div>
     </form>

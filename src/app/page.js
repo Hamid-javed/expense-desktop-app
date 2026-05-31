@@ -76,14 +76,10 @@ export default async function DashboardPage({ searchParams }) {
     totalSalesAgg,
     todaySalesAgg,
     monthSalesAgg,
-    totalDiscountAgg,
-    todayDiscountAgg,
-    monthDiscountAgg,
     totalCashAgg,
-    totalCreditAgg,
     filteredSales,
   ] = await Promise.all([
-    // Net sales (after discount)
+    // Net sales (after discount) = sum of invoice totals
     Sale.aggregate([
       { $match: saleMatch },
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
@@ -106,37 +102,10 @@ export default async function DashboardPage({ searchParams }) {
       },
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]),
-    // Discounts
-    Sale.aggregate([
-      { $match: saleMatch },
-      { $group: { _id: null, total: { $sum: "$totalDiscount" } } },
-    ]),
-    Sale.aggregate([
-      {
-        $match: withUserIdForAggregate(userId, {
-          date: { $gte: startOfDay, $lte: endOfDay },
-          deletedAt: null,
-        }),
-      },
-      { $group: { _id: null, total: { $sum: "$totalDiscount" } } },
-    ]),
-    Sale.aggregate([
-      {
-        $match: withUserIdForAggregate(userId, {
-          date: { $gte: monthStart, $lte: monthEnd },
-          deletedAt: null,
-        }),
-      },
-      { $group: { _id: null, total: { $sum: "$totalDiscount" } } },
-    ]),
-    // Cash / credit summaries
+    // Cash collected (all time). Outstanding credit is derived = total - cash.
     Sale.aggregate([
       { $match: saleMatch },
       { $group: { _id: null, total: { $sum: "$cashCollected" } } },
-    ]),
-    Sale.aggregate([
-      { $match: saleMatch },
-      { $group: { _id: null, total: { $sum: "$creditRemaining" } } },
     ]),
     // Listing data
     Sale.find(
@@ -156,19 +125,13 @@ export default async function DashboardPage({ searchParams }) {
       .lean(),
   ]);
 
-  const totalSaleNet = totalSalesAgg[0]?.total || 0;
-  const todaySaleNet = todaySalesAgg[0]?.total || 0;
-  const monthlySaleNet = monthSalesAgg[0]?.total || 0;
-
-  const totalSaleDiscount = totalDiscountAgg[0]?.total || 0;
-  const todaySaleDiscount = todayDiscountAgg[0]?.total || 0;
-  const monthlySaleDiscount = monthDiscountAgg[0]?.total || 0;
-
-  const totalSale = totalSaleNet + totalSaleDiscount;
-  const todaySale = todaySaleNet + todaySaleDiscount;
-  const monthlySale = monthlySaleNet + monthlySaleDiscount;
+  // "Total Sale" is net of discount everywhere (matches shop page and the
+  // cash/credit split, which both reconcile against the net invoice total).
+  const totalSale = totalSalesAgg[0]?.total || 0;
+  const todaySale = todaySalesAgg[0]?.total || 0;
+  const monthlySale = monthSalesAgg[0]?.total || 0;
   const totalCashCollected = totalCashAgg[0]?.total || 0;
-  const totalOutstandingCredit = totalCreditAgg[0]?.total || 0;
+  const totalOutstandingCredit = Math.max(0, totalSale - totalCashCollected);
 
   const formatAmount = (n) =>
     (n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 });

@@ -37,8 +37,7 @@ export async function GET(req) {
   const unpaidSales = sales.filter((sale) => {
     const total = sale.totalAmount ?? 0;
     const cash = sale.cashCollected ?? 0;
-    const credit = sale.creditRemaining ?? 0;
-    const amountRemaining = credit > 0 ? credit : total - cash;
+    const amountRemaining = total - cash;
     return sale.status === "unpaid" && amountRemaining > 0;
   });
 

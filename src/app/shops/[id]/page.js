@@ -164,7 +164,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
                     </div>
                   )}
                   <div className="text-xs text-slate-600">
-                    Cash: {(sale.cashCollected ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} · Credit: {(sale.creditRemaining ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    Cash: {(sale.cashCollected ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} · Credit: {Math.max(0, (sale.totalAmount ?? 0) - (sale.cashCollected ?? 0)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
@@ -173,7 +173,6 @@ export default async function ShopDetailPage({ params, searchParams }) {
                 shopId={id}
                 totalAmount={sale.totalAmount}
                 cashCollected={sale.cashCollected ?? 0}
-                creditRemaining={sale.creditRemaining ?? 0}
               />
               <ReturnProductForm sale={serializeForClient(sale)} shopId={id} />
               {returnsList.length > 0 && (
@@ -286,7 +285,11 @@ export default async function ShopDetailPage({ params, searchParams }) {
 
   const totalSales = displaySales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
   const totalCash = displaySales.reduce((sum, s) => sum + (s.cashCollected ?? 0), 0);
-  const totalCredit = displaySales.reduce((sum, s) => sum + (s.creditRemaining ?? 0), 0);
+  // Credit is always the uncollected remainder of each invoice (total - cash).
+  const totalCredit = displaySales.reduce(
+    (sum, s) => sum + Math.max(0, (s.totalAmount ?? 0) - (s.cashCollected ?? 0)),
+    0
+  );
 
   const route = shop.routeId
     ? await RouteModel.findOne(withUserId(userId, { _id: shop.routeId })).populate("assignedSaleman").lean()
@@ -543,7 +546,7 @@ export default async function ShopDetailPage({ params, searchParams }) {
                       })}
                     </TD>
                     <TD className="text-right text-slate-600">
-                      {(sale.creditRemaining ?? 0).toLocaleString(undefined, {
+                      {Math.max(0, (sale.totalAmount ?? 0) - (sale.cashCollected ?? 0)).toLocaleString(undefined, {
                         maximumFractionDigits: 2,
                       })}
                     </TD>

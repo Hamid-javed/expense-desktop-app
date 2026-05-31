@@ -167,8 +167,11 @@ export async function updateSaleItemQuantity(formData) {
     const oldEffectivePrice = item.price - (item.discount || 0);
     const oldLineTotal = oldQuantity * oldEffectivePrice;
     const revenueChange = item.lineTotal - oldLineTotal;
-    const oldSaleTotal = sale.totalAmount - revenueChange; // Sale total before update
-    const saleTotalChange = sale.totalAmount - oldSaleTotal;
+
+    // Total shrank: clamp cash to the new total and re-derive credit so
+    // cash never exceeds the invoice and credit = total - cash.
+    const newCashCollected = Math.min(sale.cashCollected ?? 0, sale.totalAmount);
+    const newCreditRemaining = Math.max(0, sale.totalAmount - newCashCollected);
 
     // Update product
     await Product.findOneAndUpdate(
@@ -189,7 +192,13 @@ export async function updateSaleItemQuantity(formData) {
     const saleIdValue = sale._id || sale.id;
     await Sale.findOneAndUpdate(
       withUserId(userId, { _id: saleIdValue }),
-      { items: sale.items, totalAmount: sale.totalAmount, totalDiscount: sale.totalDiscount }
+      {
+        items: sale.items,
+        totalAmount: sale.totalAmount,
+        totalDiscount: sale.totalDiscount,
+        cashCollected: newCashCollected,
+        creditRemaining: newCreditRemaining,
+      }
     );
 
     // Revalidate paths
