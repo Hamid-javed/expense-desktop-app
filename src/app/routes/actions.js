@@ -137,9 +137,9 @@ export async function assignSalemanToRoute(formData) {
       return { error: "Saleman not found" };
     }
 
-    // Check if this staff is already assigned to a different route
+    // Check if this saleman is already assigned to a different route
     const existingRoute = await RouteModel.findOne(
-      withUserId(userId, { assignedStaff: staffId, _id: { $ne: routeId }, deletedAt: null })
+      withUserId(userId, { assignedSaleman: salemanId, _id: { $ne: routeId }, deletedAt: null })
     );
 
     if (existingRoute) {

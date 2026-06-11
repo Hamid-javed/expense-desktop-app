@@ -248,6 +248,7 @@ export async function createSale(formData) {
           creditRemaining: mergedCredit,
           orderTakerId: data.orderTakerId,
           orderTakeDate,
+          status: data.paymentType === "cash" ? "paid" : "unpaid",
         }
       );
     } else {
@@ -271,6 +272,7 @@ export async function createSale(formData) {
         paymentType: data.paymentType,
         cashCollected,
         creditRemaining,
+        status: data.paymentType === "cash" ? "paid" : "unpaid",
       };
       sale = await Sale.create({ userId, ...saleData });
 

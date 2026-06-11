@@ -183,17 +183,7 @@ export function OrderTakerRow({ orderTaker, updateOrderTaker, deleteOrderTaker }
             </div>
           </form>
         ) : (
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-slate-800">{orderTaker.name}</span>
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              className="text-slate-400 hover:text-slate-600 text-xs px-1.5 py-0.5 rounded hover:bg-slate-100"
-              title="Edit"
-            >
-              ✏️
-            </button>
-          </div>
+          <span className="font-medium text-slate-800">{orderTaker.name}</span>
         )}
       </TD>
       <TD>{orderTaker.number || "-"}</TD>
@@ -201,6 +191,13 @@ export function OrderTakerRow({ orderTaker, updateOrderTaker, deleteOrderTaker }
       <TD>
         {!isEditing && (
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => setIsEditing(true)}
+            >
+              Edit
+            </Button>
             <DownloadOrderTakerReportButton orderTakerId={orderTaker._id} />
             <Button
               variant="ghost"

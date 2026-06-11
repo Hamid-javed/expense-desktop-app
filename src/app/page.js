@@ -1,8 +1,9 @@
-import { connectToDatabase } from "../lib/db";
+import { connectToDatabase, isMongoDB } from "../lib/db";
 import { isOfflineError } from "../lib/db/connectionError.js";
 import { requireUserId } from "../lib/auth";
 import { withUserId, withUserIdForAggregate } from "../lib/tenant";
 import { Sale } from "../models/Sale";
+import mongoose from "mongoose";
 import "../models/Shop";
 import "../models/Saleman";
 import Link from "next/link";
@@ -47,7 +48,10 @@ export default async function DashboardPage({ searchParams }) {
     throw err;
   }
 
-  const saleMatch = withUserIdForAggregate(userId, { deletedAt: null });
+  // Mongoose aggregate pipelines do NOT auto-cast userId to ObjectId,
+  // so we must convert explicitly for MongoDB.
+  const userIdForAgg = isMongoDB() ? new mongoose.Types.ObjectId(userId) : userId;
+  const saleMatch = withUserIdForAggregate(userIdForAgg, { deletedAt: null });
   const todayStr = getTodayPK();
   const period =
     search?.period === "monthly"
@@ -86,7 +90,7 @@ export default async function DashboardPage({ searchParams }) {
     ]),
     Sale.aggregate([
       {
-        $match: withUserIdForAggregate(userId, {
+        $match: withUserIdForAggregate(userIdForAgg, {
           date: { $gte: startOfDay, $lte: endOfDay },
           deletedAt: null,
         }),
@@ -95,7 +99,7 @@ export default async function DashboardPage({ searchParams }) {
     ]),
     Sale.aggregate([
       {
-        $match: withUserIdForAggregate(userId, {
+        $match: withUserIdForAggregate(userIdForAgg, {
           date: { $gte: monthStart, $lte: monthEnd },
           deletedAt: null,
         }),
@@ -107,11 +111,11 @@ export default async function DashboardPage({ searchParams }) {
       { $match: saleMatch },
       { $group: { _id: null, total: { $sum: "$cashCollected" } } },
     ]),
-    // Listing data
+    // Listing data — respect period filter
     Sale.find(
       period === "all"
         ? saleMatch
-        : withUserIdForAggregate(userId, {
+        : withUserIdForAggregate(userIdForAgg, {
           deletedAt: null,
           date:
             period === "daily"

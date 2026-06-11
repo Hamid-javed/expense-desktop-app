@@ -11,9 +11,9 @@ export function ProfitSummary({
     totalSoldQty,
     period
 }) {
-    const grossProfit = totalRevenue - totalCOGS;
     const netSales = totalRevenue - totalDiscounts;
-    const netProfit = netSales - totalCOGS - totalExpenses;
+    const grossProfit = netSales - totalCOGS;
+    const netProfit = grossProfit - totalExpenses;
 
     const format = (n) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const formatQty = (n) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
